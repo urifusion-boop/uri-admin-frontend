@@ -1,0 +1,603 @@
+'use client';
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Download, Filter, MoreVertical, Eye, RefreshCw, CheckCircle, XCircle, Clock, CreditCard, X } from 'lucide-react';
+
+interface Transaction {
+  id: string;
+  user: string;
+  email: string;
+  type: 'subscription' | 'refund' | 'payment';
+  amount: number;
+  status: 'completed' | 'pending' | 'failed';
+  plan?: string;
+  date: string;
+  method: string;
+}
+
+const mockTransactions: Transaction[] = [
+  { id: 'TXN-001', user: 'Sarah Johnson', email: 'sarah.j@example.com', type: 'subscription', amount: 49.99, status: 'completed', plan: 'Pro Plan', date: '2024-12-06', method: 'Visa ****4242' },
+  { id: 'TXN-002', user: 'Michael Chen', email: 'm.chen@business.com', type: 'subscription', amount: 99.99, status: 'completed', plan: 'Enterprise', date: '2024-12-05', method: 'Mastercard ****8888' },
+  { id: 'TXN-003', user: 'Emma Davis', email: 'emma.d@agency.com', type: 'payment', amount: 199.00, status: 'pending', plan: 'Custom Package', date: '2024-12-05', method: 'PayPal' },
+  { id: 'TXN-004', user: 'James Wilson', email: 'james.w@mail.com', type: 'refund', amount: -29.99, status: 'completed', plan: 'Basic Plan', date: '2024-12-04', method: 'Visa ****1234' },
+  { id: 'TXN-005', user: 'Lisa Anderson', email: 'lisa.a@startup.io', type: 'subscription', amount: 49.99, status: 'failed', plan: 'Pro Plan', date: '2024-12-04', method: 'Visa ****5678' },
+  { id: 'TXN-006', user: 'David Brown', email: 'david.b@tech.com', type: 'subscription', amount: 79.99, status: 'completed', plan: 'Pro Plus', date: '2024-12-03', method: 'Amex ****3333' },
+  { id: 'TXN-007', user: 'Sophie Taylor', email: 'sophie.t@design.co', type: 'payment', amount: 149.00, status: 'completed', plan: 'One-time Payment', date: '2024-12-03', method: 'PayPal' },
+  { id: 'TXN-008', user: 'Alex Martinez', email: 'alex.m@company.com', type: 'subscription', amount: 29.99, status: 'pending', plan: 'Basic Plan', date: '2024-12-02', method: 'Visa ****9876' },
+];
+
+const statusConfig = {
+  completed: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', border: '#d1fae5', icon: CheckCircle },
+  pending: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', border: '#fef3c7', icon: Clock },
+  failed: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', border: '#fecaca', icon: XCircle },
+};
+
+const typeConfig = {
+  subscription: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
+  payment: { bg: 'rgba(205, 27, 120, 0.1)', text: '#CD1B78', border: '#fce4ec' },
+  refund: { bg: 'rgba(107, 114, 128, 0.1)', text: '#6b7280', border: '#e5e7eb' },
+};
+
+export function TransactionsTable() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+
+  const filteredTransactions = mockTransactions.filter((txn) => {
+    const matchesSearch =
+      txn.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.plan?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || txn.status === statusFilter;
+    const matchesType = typeFilter === 'all' || txn.type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setTypeFilter('all');
+    setSearchQuery('');
+  };
+
+  const activeFiltersCount = [statusFilter !== 'all', typeFilter !== 'all'].filter(Boolean).length;
+
+  return (
+    <div
+      style={{
+        background: '#fff',
+        borderRadius: '20px',
+        boxShadow: '1px 1px 6px 3px rgba(0, 0, 0, 0.07)',
+        border: '1px solid #F0F0F0',
+        padding: '32px',
+      }}
+    >
+      {/* Header */}
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#0d0e0f', marginBottom: '4px' }}>
+              Transaction History
+            </h3>
+            <p style={{ fontSize: '14px', color: '#6C727F' }}>
+              Complete record of all payments and subscription transactions
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                border: '1px solid #E5E7EB',
+                backgroundColor: showFilters ? '#F9FAFB' : '#fff',
+                color: '#0d0e0f',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                position: 'relative',
+              }}
+            >
+              <Filter size={16} />
+              Filters
+              {activeFiltersCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '-6px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    backgroundColor: '#CD1B78',
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+            <button
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#CD1B78',
+                color: '#fff',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Download size={16} />
+              Export
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div style={{ position: 'relative', marginBottom: showFilters ? '16px' : '0' }}>
+          <Search
+            size={18}
+            style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }}
+          />
+          <input
+            type="text"
+            placeholder="Search by transaction ID, user name, email, or plan..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px 12px 48px',
+              borderRadius: '10px',
+              border: '1px solid #E5E7EB',
+              fontSize: '14px',
+              color: '#0d0e0f',
+              backgroundColor: '#F9FAFB',
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                padding: '4px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                color: '#9CA3AF',
+              }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {/* Advanced Filters */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div
+                style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  backgroundColor: '#F9FAFB',
+                  border: '1px solid #E5E7EB',
+                  marginTop: '16px',
+                }}
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#0d0e0f', marginBottom: '8px', display: 'block' }}>
+                      Status
+                    </label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E5E7EB',
+                        fontSize: '14px',
+                        color: '#0d0e0f',
+                        backgroundColor: '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="completed">Completed</option>
+                      <option value="pending">Pending</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#0d0e0f', marginBottom: '8px', display: 'block' }}>
+                      Type
+                    </label>
+                    <select
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E5E7EB',
+                        fontSize: '14px',
+                        color: '#0d0e0f',
+                        backgroundColor: '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="all">All Types</option>
+                      <option value="subscription">Subscription</option>
+                      <option value="payment">Payment</option>
+                      <option value="refund">Refund</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button
+                      onClick={clearFilters}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid #E5E7EB',
+                        backgroundColor: '#fff',
+                        color: '#0d0e0f',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        width: '100%',
+                      }}
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Modern Table */}
+      <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Transaction
+              </th>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Customer
+              </th>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Plan
+              </th>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Type
+              </th>
+              <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Amount
+              </th>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Status
+              </th>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Payment
+              </th>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Date
+              </th>
+              <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: '12px', fontWeight: 600, color: '#6C727F', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredTransactions.map((txn, index) => {
+              const StatusIcon = statusConfig[txn.status].icon;
+              return (
+                <motion.tr
+                  key={txn.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  style={{
+                    backgroundColor: '#fff',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    const row = e.currentTarget;
+                    row.style.backgroundColor = '#F9FAFB';
+                    row.style.transform = 'scale(1.01)';
+                    row.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+                  }}
+                  onMouseLeave={(e) => {
+                    const row = e.currentTarget;
+                    row.style.backgroundColor = '#fff';
+                    row.style.transform = 'scale(1)';
+                    row.style.boxShadow = 'none';
+                  }}
+                >
+                  <td
+                    style={{
+                      padding: '16px',
+                      borderTopLeftRadius: '12px',
+                      borderBottomLeftRadius: '12px',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      borderLeft: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f', fontFamily: 'monospace' }}>
+                      {txn.id}
+                    </span>
+                  </td>
+                  <td
+                    style={{
+                      padding: '16px',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f', marginBottom: '2px' }}>{txn.user}</p>
+                      <p style={{ fontSize: '12px', color: '#9EA3AE', margin: 0 }}>{txn.email}</p>
+                    </div>
+                  </td>
+                  <td
+                    style={{
+                      padding: '16px',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#6C727F' }}>{txn.plan}</span>
+                  </td>
+                  <td
+                    style={{
+                      padding: '16px',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <span
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        backgroundColor: typeConfig[txn.type].bg,
+                        color: typeConfig[txn.type].text,
+                        borderRadius: '8px',
+                        border: `1px solid ${typeConfig[txn.type].border}`,
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {txn.type}
+                    </span>
+                  </td>
+                  <td
+                    style={{
+                      padding: '16px',
+                      textAlign: 'right',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: txn.amount > 0 ? '#10b981' : '#ef4444',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {txn.amount > 0 ? '+' : ''}${Math.abs(txn.amount).toFixed(2)}
+                    </span>
+                  </td>
+                  <td
+                    style={{
+                      padding: '16px',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <StatusIcon size={16} style={{ color: statusConfig[txn.status].text }} />
+                      <span
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          backgroundColor: statusConfig[txn.status].bg,
+                          color: statusConfig[txn.status].text,
+                          borderRadius: '8px',
+                          border: `1px solid ${statusConfig[txn.status].border}`,
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {txn.status}
+                      </span>
+                    </div>
+                  </td>
+                  <td
+                    style={{
+                      padding: '16px',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <CreditCard size={16} style={{ color: '#6C727F' }} />
+                      <span style={{ fontSize: '13px', color: '#6C727F' }}>{txn.method}</span>
+                    </div>
+                  </td>
+                  <td
+                    style={{
+                      padding: '16px',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <span style={{ fontSize: '13px', color: '#6C727F' }}>
+                      {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </td>
+                  <td
+                    style={{
+                      padding: '16px',
+                      textAlign: 'center',
+                      borderTopRightRadius: '12px',
+                      borderBottomRightRadius: '12px',
+                      borderTop: '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      borderRight: '1px solid #F0F0F0',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => setSelectedTransaction(txn)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #E5E7EB',
+                          backgroundColor: '#fff',
+                          color: '#0d0e0f',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <Eye size={14} />
+                        View
+                      </button>
+                      <button
+                        style={{
+                          padding: '6px',
+                          borderRadius: '6px',
+                          border: '1px solid #E5E7EB',
+                          backgroundColor: '#fff',
+                          color: '#6C727F',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination & Stats */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '20px', borderTop: '1px solid #F0F0F0' }}>
+        <div>
+          <p style={{ fontSize: '14px', color: '#6C727F' }}>
+            Showing <span style={{ fontWeight: 600, color: '#0d0e0f' }}>{filteredTransactions.length}</span> of{' '}
+            <span style={{ fontWeight: 600, color: '#0d0e0f' }}>{mockTransactions.length}</span> transactions
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            disabled
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid #E5E7EB',
+              backgroundColor: '#F9FAFB',
+              color: '#9EA3AE',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'not-allowed',
+            }}
+          >
+            Previous
+          </button>
+          <button
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: '#CD1B78',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            1
+          </button>
+          <button
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid #E5E7EB',
+              backgroundColor: '#fff',
+              color: '#0d0e0f',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            2
+          </button>
+          <button
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid #E5E7EB',
+              backgroundColor: '#fff',
+              color: '#0d0e0f',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
