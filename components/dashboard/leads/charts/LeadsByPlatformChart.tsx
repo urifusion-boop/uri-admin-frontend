@@ -2,14 +2,28 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-const leadsByPlatform = [
-  { platform: 'Twitter', count: 156, color: '#1DA1F2' },
-  { platform: 'Facebook', count: 98, color: '#1877F2' },
-  { platform: 'Instagram', count: 45, color: '#E4405F' },
-  { platform: 'LinkedIn', count: 27, color: '#0A66C2' },
-];
+interface PlatformDataItem {
+  platform: string;
+  count: number;
+  color?: string;
+}
 
-export function LeadsByPlatformChart() {
+const PLATFORM_COLORS: Record<string, string> = {
+  Twitter: '#1DA1F2',
+  X: '#1DA1F2',
+  Facebook: '#1877F2',
+  Instagram: '#E4405F',
+  LinkedIn: '#0A66C2',
+  TikTok: '#000000',
+  Reddit: '#FF4500',
+};
+
+export function LeadsByPlatformChart({ data }: { data?: PlatformDataItem[] }) {
+  const chartData = (data || []).map((item) => ({
+    platform: item.platform,
+    count: item.count,
+    color: item.color || PLATFORM_COLORS[item.platform] || '#3b82f6',
+  }));
   return (
     <div
       style={{
@@ -23,7 +37,7 @@ export function LeadsByPlatformChart() {
       <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0d0e0f', marginBottom: '4px' }}>Leads by Platform</h3>
       <p style={{ fontSize: '14px', color: '#6C727F', marginBottom: '24px' }}>Distribution across social platforms</p>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={leadsByPlatform} layout="horizontal">
+        <BarChart data={chartData} layout="horizontal">
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" strokeOpacity={0.5} />
           <XAxis type="number" stroke="#9CA3AF" fontSize={13} tickLine={false} axisLine={false} />
           <YAxis type="category" dataKey="platform" stroke="#9CA3AF" fontSize={13} tickLine={false} axisLine={false} />
@@ -37,7 +51,7 @@ export function LeadsByPlatformChart() {
             }}
           />
           <Bar dataKey="count" radius={[0, 8, 8, 0]}>
-            {leadsByPlatform.map((entry, index) => (
+            {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Bar>

@@ -2,36 +2,17 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Download, Filter, MoreVertical, Eye, RefreshCw, CheckCircle, XCircle, Clock, CreditCard, X, Trash2, Send } from 'lucide-react';
+import { Search, Download, Filter, MoreVertical, Eye, RefreshCw, CheckCircle, XCircle, Clock, CreditCard, X, Trash2, Send, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/common/Modal';
 import { Dropdown } from '@/components/common/Dropdown';
 import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { toast } from 'sonner';
+import { useRecentTransactions } from '@/hooks/useFinance';
+import type { RecentTransactionDto } from '@/lib/api/finance-service';
+import type { ElementType } from 'react';
 
-interface Transaction {
-  id: string;
-  user: string;
-  email: string;
-  type: 'subscription' | 'refund' | 'payment';
-  amount: number;
-  status: 'completed' | 'pending' | 'failed';
-  plan?: string;
-  date: string;
-  method: string;
-}
-
-const mockTransactions: Transaction[] = [
-  { id: 'TXN-001', user: 'Sarah Johnson', email: 'sarah.j@example.com', type: 'subscription', amount: 49.99, status: 'completed', plan: 'Pro Plan', date: '2024-12-06', method: 'Visa ****4242' },
-  { id: 'TXN-002', user: 'Michael Chen', email: 'm.chen@business.com', type: 'subscription', amount: 99.99, status: 'completed', plan: 'Enterprise', date: '2024-12-05', method: 'Mastercard ****8888' },
-  { id: 'TXN-003', user: 'Emma Davis', email: 'emma.d@agency.com', type: 'payment', amount: 199.00, status: 'pending', plan: 'Custom Package', date: '2024-12-05', method: 'PayPal' },
-  { id: 'TXN-004', user: 'James Wilson', email: 'james.w@mail.com', type: 'refund', amount: -29.99, status: 'completed', plan: 'Basic Plan', date: '2024-12-04', method: 'Visa ****1234' },
-  { id: 'TXN-005', user: 'Lisa Anderson', email: 'lisa.a@startup.io', type: 'subscription', amount: 49.99, status: 'failed', plan: 'Pro Plan', date: '2024-12-04', method: 'Visa ****5678' },
-  { id: 'TXN-006', user: 'David Brown', email: 'david.b@tech.com', type: 'subscription', amount: 79.99, status: 'completed', plan: 'Pro Plus', date: '2024-12-03', method: 'Amex ****3333' },
-  { id: 'TXN-007', user: 'Sophie Taylor', email: 'sophie.t@design.co', type: 'payment', amount: 149.00, status: 'completed', plan: 'One-time Payment', date: '2024-12-03', method: 'PayPal' },
-  { id: 'TXN-008', user: 'Alex Martinez', email: 'alex.m@company.com', type: 'subscription', amount: 29.99, status: 'pending', plan: 'Basic Plan', date: '2024-12-02', method: 'Visa ****9876' },
-];
-
-const statusConfig = {
+const statusConfig: Record<string, { bg: string; text: string; border: string; icon: ElementType }> = {
+  success: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', border: '#d1fae5', icon: CheckCircle },
   completed: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', border: '#d1fae5', icon: CheckCircle },
   pending: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', border: '#fef3c7', icon: Clock },
   failed: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', border: '#fecaca', icon: XCircle },
@@ -44,24 +25,28 @@ const typeConfig = {
 };
 
 export function TransactionsTable() {
+  const { data: transactionsData, isLoading } = useRecentTransactions(50);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<RecentTransactionDto | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRefundConfirm, setShowRefundConfirm] = useState(false);
-  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
-  const [transactionToRefund, setTransactionToRefund] = useState<Transaction | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<RecentTransactionDto | null>(null);
+  const [transactionToRefund, setTransactionToRefund] = useState<RecentTransactionDto | null>(null);
 
-  const filteredTransactions = mockTransactions.filter((txn) => {
+  // Transform API transactions to component format
+  const allTransactions = transactionsData?.transactions || [];
+
+  const filteredTransactions = allTransactions.filter((txn) => {
     const matchesSearch =
-      txn.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      txn.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      txn.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || txn.status === statusFilter;
-    const matchesType = typeFilter === 'all' || txn.type === typeFilter;
+      txn.transactionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.userEmail.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || txn.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesType = typeFilter === 'all' || txn.channel.toLowerCase().includes(typeFilter.toLowerCase());
     return matchesSearch && matchesStatus && matchesType;
   });
 
@@ -72,43 +57,43 @@ export function TransactionsTable() {
     setTypeFilter('all');
   };
 
-  const handleViewTransaction = (transaction: Transaction) => {
+  const handleViewTransaction = (transaction: RecentTransactionDto) => {
     setSelectedTransaction(transaction);
     setShowViewModal(true);
   };
 
-  const handleRetryTransaction = (transaction: Transaction) => {
-    toast.success(`Retrying transaction ${transaction.id}...`);
+  const handleRetryTransaction = (transaction: RecentTransactionDto) => {
+    toast.success(`Retrying transaction ${transaction.transactionId}...`);
   };
 
-  const handleRefundClick = (transaction: Transaction) => {
+  const handleRefundClick = (transaction: RecentTransactionDto) => {
     setTransactionToRefund(transaction);
     setShowRefundConfirm(true);
   };
 
   const confirmRefund = () => {
     if (transactionToRefund) {
-      toast.success(`Refund processed for ${transactionToRefund.id}`);
+      toast.success(`Refund processed for ${transactionToRefund.transactionId}`);
       setTransactionToRefund(null);
     }
   };
 
-  const handleSendReceipt = (transaction: Transaction) => {
-    toast.success(`Receipt sent to ${transaction.email}`);
+  const handleSendReceipt = (transaction: RecentTransactionDto) => {
+    toast.success(`Receipt sent to ${transaction.userEmail}`);
   };
 
-  const handleDownloadInvoice = (transaction: Transaction) => {
-    toast.success(`Downloading invoice for ${transaction.id}...`);
+  const handleDownloadInvoice = (transaction: RecentTransactionDto) => {
+    toast.success(`Downloading invoice for ${transaction.transactionId}...`);
   };
 
-  const handleDeleteClick = (transaction: Transaction) => {
+  const handleDeleteClick = (transaction: RecentTransactionDto) => {
     setTransactionToDelete(transaction);
     setShowDeleteConfirm(true);
   };
 
   const confirmDelete = () => {
     if (transactionToDelete) {
-      toast.success(`Transaction ${transactionToDelete.id} deleted`);
+      toast.success(`Transaction ${transactionToDelete.transactionId} deleted`);
       setTransactionToDelete(null);
     }
   };
@@ -321,257 +306,270 @@ export function TransactionsTable() {
         </div>
 
         {/* Table */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Transaction ID</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>User</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Type</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Amount</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Status</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Date</th>
-                <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTransactions.map((transaction, index) => {
-                const StatusIcon = statusConfig[transaction.status].icon;
-                return (
-                  <motion.tr
-                    key={transaction.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    style={{
-                      background: '#fff',
-                      border: '1px solid #F0F0F0',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      const row = e.currentTarget;
-                      row.style.backgroundColor = '#F9FAFB';
-                      row.style.transform = 'scale(1.01)';
-                      row.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
-                    }}
-                    onMouseLeave={(e) => {
-                      const row = e.currentTarget;
-                      row.style.backgroundColor = '#fff';
-                      row.style.transform = 'scale(1)';
-                      row.style.boxShadow = 'none';
-                    }}
-                  >
-                    <td style={{ padding: '16px', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#0d0e0f', fontFamily: 'monospace' }}>
-                        {transaction.id}
-                      </span>
-                    </td>
+        {isLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 0' }}>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" style={{ color: '#CD1B78' }} />
+          </div>
+        ) : filteredTransactions.length === 0 ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 0' }}>
+            <p style={{ fontSize: '14px', color: '#6C727F' }}>No transactions found</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Transaction ID</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>User</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Channel</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Amount</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Date</th>
+                  <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTransactions.map((transaction, index) => {
+                  const statusKey = transaction.status.toLowerCase();
+                  const StatusIcon = statusConfig[statusKey]?.icon || CheckCircle;
+                  return (
+                    <motion.tr
+                      key={transaction.transactionId}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      style={{
+                        background: '#fff',
+                        border: '1px solid #F0F0F0',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        const row = e.currentTarget;
+                        row.style.backgroundColor = '#F9FAFB';
+                        row.style.transform = 'scale(1.01)';
+                        row.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+                      }}
+                      onMouseLeave={(e) => {
+                        const row = e.currentTarget;
+                        row.style.backgroundColor = '#fff';
+                        row.style.transform = 'scale(1)';
+                        row.style.boxShadow = 'none';
+                      }}
+                    >
+                      <td style={{ padding: '16px', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#0d0e0f', fontFamily: 'monospace' }}>
+                          {transaction.transactionId}
+                        </span>
+                      </td>
 
-                    <td style={{ padding: '16px' }}>
-                      <div>
-                        <p style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f', marginBottom: '4px' }}>
-                          {transaction.user}
-                        </p>
-                        <p style={{ fontSize: '13px', color: '#6C727F', margin: 0 }}>{transaction.email}</p>
-                      </div>
-                    </td>
+                      <td style={{ padding: '16px' }}>
+                        <div>
+                          <p style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f', marginBottom: '4px' }}>
+                            {transaction.userName}
+                          </p>
+                          <p style={{ fontSize: '13px', color: '#6C727F', margin: 0 }}>{transaction.userEmail}</p>
+                        </div>
+                      </td>
 
-                    <td style={{ padding: '16px' }}>
-                      <span
-                        style={{
-                          padding: '4px 12px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          backgroundColor: typeConfig[transaction.type].bg,
-                          color: typeConfig[transaction.type].text,
-                          borderRadius: '8px',
-                          border: `1px solid ${typeConfig[transaction.type].border}`,
-                          display: 'inline-block',
-                          textTransform: 'capitalize',
-                        }}
-                      >
-                        {transaction.type}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '16px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: transaction.amount < 0 ? '#ef4444' : '#0d0e0f', fontFamily: 'monospace' }}>
-                        ${Math.abs(transaction.amount).toFixed(2)}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '16px' }}>
-                      <span
-                        style={{
-                          padding: '4px 12px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          backgroundColor: statusConfig[transaction.status].bg,
-                          color: statusConfig[transaction.status].text,
-                          borderRadius: '8px',
-                          border: `1px solid ${statusConfig[transaction.status].border}`,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          textTransform: 'capitalize',
-                        }}
-                      >
-                        <StatusIcon style={{ width: '12px', height: '12px' }} />
-                        {transaction.status}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '16px' }}>
-                      <span style={{ fontSize: '13px', color: '#6C727F' }}>
-                        {new Date(transaction.date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '16px', textAlign: 'right', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button
-                          onClick={() => handleViewTransaction(transaction)}
+                      <td style={{ padding: '16px' }}>
+                        <span
                           style={{
-                            padding: '8px 12px',
-                            background: '#fff',
-                            border: '1px solid #E5E5E5',
+                            padding: '4px 12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor: typeConfig.payment.bg,
+                            color: typeConfig.payment.text,
                             borderRadius: '8px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            color: '#6C727F',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#F2F2F2';
-                            e.currentTarget.style.borderColor = '#D1D5DB';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#fff';
-                            e.currentTarget.style.borderColor = '#E5E5E5';
+                            border: `1px solid ${typeConfig.payment.border}`,
+                            display: 'inline-block',
+                            textTransform: 'capitalize',
                           }}
                         >
-                          <Eye style={{ width: '14px', height: '14px' }} />
-                          View
-                        </button>
+                          {transaction.channel}
+                        </span>
+                      </td>
 
-                        <Dropdown
-                          trigger={
-                            <button
-                              style={{
-                                padding: '8px',
-                                background: '#fff',
-                                border: '1px solid #E5E5E5',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#F2F2F2';
-                                e.currentTarget.style.borderColor = '#D1D5DB';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#fff';
-                                e.currentTarget.style.borderColor = '#E5E5E5';
-                              }}
-                            >
-                              <MoreVertical style={{ width: '16px', height: '16px', color: '#6C727F' }} />
-                            </button>
-                          }
-                          items={[
-                            {
-                              label: 'Download Invoice',
-                              icon: <Download style={{ width: '16px', height: '16px' }} />,
-                              onClick: () => handleDownloadInvoice(transaction),
-                            },
-                            {
-                              label: 'Send Receipt',
-                              icon: <Send style={{ width: '16px', height: '16px' }} />,
-                              onClick: () => handleSendReceipt(transaction),
-                            },
-                            ...(transaction.status === 'failed'
-                              ? [
+                      <td style={{ padding: '16px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#0d0e0f', fontFamily: 'monospace' }}>
+                          {transaction.currency} {transaction.amount.toLocaleString()}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '16px' }}>
+                        <span
+                          style={{
+                            padding: '4px 12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor: statusConfig[statusKey]?.bg || statusConfig.completed.bg,
+                            color: statusConfig[statusKey]?.text || statusConfig.completed.text,
+                            borderRadius: '8px',
+                            border: `1px solid ${statusConfig[statusKey]?.border || statusConfig.completed.border}`,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            textTransform: 'capitalize',
+                          }}
+                        >
+                          <StatusIcon style={{ width: '12px', height: '12px' }} />
+                          {transaction.status}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '16px' }}>
+                        <span style={{ fontSize: '13px', color: '#6C727F' }}>
+                          {new Date(transaction.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '16px', textAlign: 'right', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => handleViewTransaction(transaction)}
+                            style={{
+                              padding: '8px 12px',
+                              background: '#fff',
+                              border: '1px solid #E5E5E5',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              color: '#6C727F',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#F2F2F2';
+                              e.currentTarget.style.borderColor = '#D1D5DB';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#fff';
+                              e.currentTarget.style.borderColor = '#E5E5E5';
+                            }}
+                          >
+                            <Eye style={{ width: '14px', height: '14px' }} />
+                            View
+                          </button>
+
+                          <Dropdown
+                            trigger={
+                              <button
+                                style={{
+                                  padding: '8px',
+                                  background: '#fff',
+                                  border: '1px solid #E5E5E5',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#F2F2F2';
+                                  e.currentTarget.style.borderColor = '#D1D5DB';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#fff';
+                                  e.currentTarget.style.borderColor = '#E5E5E5';
+                                }}
+                              >
+                                <MoreVertical style={{ width: '16px', height: '16px', color: '#6C727F' }} />
+                              </button>
+                            }
+                            items={[
+                              {
+                                label: 'Download Invoice',
+                                icon: <Download style={{ width: '16px', height: '16px' }} />,
+                                onClick: () => handleDownloadInvoice(transaction),
+                              },
+                              {
+                                label: 'Send Receipt',
+                                icon: <Send style={{ width: '16px', height: '16px' }} />,
+                                onClick: () => handleSendReceipt(transaction),
+                              },
+                              ...(statusKey === 'failed'
+                                ? [
                                   {
                                     label: 'Retry Payment',
                                     icon: <RefreshCw style={{ width: '16px', height: '16px' }} />,
                                     onClick: () => handleRetryTransaction(transaction),
                                   },
                                 ]
-                              : []),
-                            ...(transaction.status === 'completed' && transaction.type !== 'refund'
-                              ? [
+                                : []),
+                              ...(statusKey === 'success' || statusKey === 'completed'
+                                ? [
                                   {
                                     label: 'Process Refund',
                                     icon: <CreditCard style={{ width: '16px', height: '16px' }} />,
                                     onClick: () => handleRefundClick(transaction),
                                   },
                                 ]
-                              : []),
-                            {
-                              label: 'Delete',
-                              icon: <Trash2 style={{ width: '16px', height: '16px' }} />,
-                              onClick: () => handleDeleteClick(transaction),
-                              variant: 'danger' as const,
-                            },
-                          ]}
-                        />
-                      </div>
-                    </td>
-                  </motion.tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                                : []),
+                              {
+                                label: 'Delete',
+                                icon: <Trash2 style={{ width: '16px', height: '16px' }} />,
+                                onClick: () => handleDeleteClick(transaction),
+                                variant: 'danger' as const,
+                              },
+                            ]}
+                          />
+                        </div>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #E5E5E5', flexWrap: 'wrap', gap: '16px' }}>
-          <p style={{ fontSize: '14px', color: '#6C727F' }}>
-            Showing {filteredTransactions.length} of {mockTransactions.length} transactions
-          </p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              disabled
-              style={{
-                padding: '8px 16px',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#9EA3AE',
-                background: 'transparent',
-                border: '1px solid #E5E5E5',
-                borderRadius: '8px',
-                cursor: 'not-allowed',
-              }}
-            >
-              Previous
-            </button>
-            <button
-              style={{
-                padding: '8px 16px',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#0d0e0f',
-                background: 'transparent',
-                border: '1px solid #E5E5E5',
-                borderRadius: '8px',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F2F2F2')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              Next
-            </button>
+        {!isLoading && filteredTransactions.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #E5E5E5', flexWrap: 'wrap', gap: '16px' }}>
+            <p style={{ fontSize: '14px', color: '#6C727F' }}>
+              Showing {filteredTransactions.length} of {transactionsData?.total || 0} transactions
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                disabled
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#9EA3AE',
+                  background: 'transparent',
+                  border: '1px solid #E5E5E5',
+                  borderRadius: '8px',
+                  cursor: 'not-allowed',
+                }}
+              >
+                Previous
+              </button>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#0d0e0f',
+                  background: 'transparent',
+                  border: '1px solid #E5E5E5',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F2F2F2')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                Next
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* View Transaction Modal */}
@@ -589,7 +587,7 @@ export function TransactionsTable() {
                   Transaction ID
                 </label>
                 <p style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>
-                  {selectedTransaction.id}
+                  {selectedTransaction.transactionId}
                 </p>
               </div>
 
@@ -602,10 +600,10 @@ export function TransactionsTable() {
                     padding: '4px 12px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    backgroundColor: statusConfig[selectedTransaction.status].bg,
-                    color: statusConfig[selectedTransaction.status].text,
+                    backgroundColor: statusConfig[selectedTransaction.status.toLowerCase()]?.bg || statusConfig.completed.bg,
+                    color: statusConfig[selectedTransaction.status.toLowerCase()]?.text || statusConfig.completed.text,
                     borderRadius: '8px',
-                    border: `1px solid ${statusConfig[selectedTransaction.status].border}`,
+                    border: `1px solid ${statusConfig[selectedTransaction.status.toLowerCase()]?.border || statusConfig.completed.border}`,
                     display: 'inline-block',
                     textTransform: 'capitalize',
                   }}
@@ -619,38 +617,38 @@ export function TransactionsTable() {
                   User
                 </label>
                 <p style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f', margin: 0 }}>
-                  {selectedTransaction.user}
+                  {selectedTransaction.userName}
                 </p>
-                <p style={{ fontSize: '13px', color: '#6C727F', margin: 0 }}>{selectedTransaction.email}</p>
+                <p style={{ fontSize: '13px', color: '#6C727F', margin: 0 }}>{selectedTransaction.userEmail}</p>
               </div>
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
                   Amount
                 </label>
-                <p style={{ fontSize: '18px', fontWeight: 700, color: selectedTransaction.amount < 0 ? '#ef4444' : '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>
-                  ${Math.abs(selectedTransaction.amount).toFixed(2)}
+                <p style={{ fontSize: '18px', fontWeight: 700, color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>
+                  {selectedTransaction.currency} {selectedTransaction.amount.toLocaleString()}
                 </p>
               </div>
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
-                  Type
+                  Channel
                 </label>
                 <span
                   style={{
                     padding: '4px 12px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    backgroundColor: typeConfig[selectedTransaction.type].bg,
-                    color: typeConfig[selectedTransaction.type].text,
+                    backgroundColor: typeConfig.payment.bg,
+                    color: typeConfig.payment.text,
                     borderRadius: '8px',
-                    border: `1px solid ${typeConfig[selectedTransaction.type].border}`,
+                    border: `1px solid ${typeConfig.payment.border}`,
                     display: 'inline-block',
                     textTransform: 'capitalize',
                   }}
                 >
-                  {selectedTransaction.type}
+                  {selectedTransaction.channel}
                 </span>
               </div>
 
@@ -659,7 +657,7 @@ export function TransactionsTable() {
                   Date
                 </label>
                 <p style={{ fontSize: '14px', color: '#0d0e0f', margin: 0 }}>
-                  {new Date(selectedTransaction.date).toLocaleDateString('en-US', {
+                  {new Date(selectedTransaction.createdAt).toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
                     year: 'numeric',
@@ -669,19 +667,19 @@ export function TransactionsTable() {
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
-                  Plan
+                  Reference
                 </label>
                 <p style={{ fontSize: '14px', color: '#0d0e0f', margin: 0 }}>
-                  {selectedTransaction.plan || 'N/A'}
+                  {selectedTransaction.reference || 'N/A'}
                 </p>
               </div>
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
-                  Payment Method
+                  Narration
                 </label>
                 <p style={{ fontSize: '14px', color: '#0d0e0f', margin: 0 }}>
-                  {selectedTransaction.method}
+                  {selectedTransaction.narration || 'N/A'}
                 </p>
               </div>
             </div>
@@ -737,7 +735,7 @@ export function TransactionsTable() {
         }}
         onConfirm={confirmDelete}
         title="Delete Transaction"
-        message={`Are you sure you want to delete transaction ${transactionToDelete?.id}? This action cannot be undone.`}
+        message={`Are you sure you want to delete transaction ${transactionToDelete?.transactionId}? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
@@ -752,7 +750,7 @@ export function TransactionsTable() {
         }}
         onConfirm={confirmRefund}
         title="Process Refund"
-        message={`Are you sure you want to process a refund of $${transactionToRefund?.amount.toFixed(2)} for transaction ${transactionToRefund?.id}? This will refund the payment to the customer.`}
+        message={`Are you sure you want to process a refund of ${transactionToRefund?.currency} ${transactionToRefund?.amount.toLocaleString()} for transaction ${transactionToRefund?.transactionId}? This will refund the payment to the customer.`}
         confirmText="Process Refund"
         cancelText="Cancel"
         variant="warning"

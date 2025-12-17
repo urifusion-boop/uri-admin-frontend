@@ -2,12 +2,16 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MoreVertical, Eye, Filter, X, CheckCircle, Clock, XCircle, Edit, Ban, Mail, Key, Trash2 } from 'lucide-react';
+import { Search, MoreVertical, Eye, Filter, X, CheckCircle, XCircle, Edit, Ban, Mail, Key, Trash2, Loader2, UserPlus } from 'lucide-react';
 import { Modal } from '@/components/common/Modal';
 import { Dropdown } from '@/components/common/Dropdown';
 import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { EditUserModal } from '../modals/EditUserModal';
+import { SendEmailModal } from '../modals/SendEmailModal';
 import { toast } from 'sonner';
+import { useUserList, useDeleteUser, useSuspendUser, useResetPassword, useUpdateUser, useActivateUser } from '@/hooks/useUsers';
+import type { ElementType } from 'react';
+import { CreateUserModal } from '../modals/CreateUserModal';
 
 interface User {
   id: string;
@@ -15,149 +19,153 @@ interface User {
   email: string;
   phone: string;
   role: string;
-  status: 'Active' | 'Suspended' | 'Pending';
+  status: 'ACTIVE' | 'INACTIVE' | 'DEACTIVATED' | 'RESTRICTED' | 'LOCKED' | 'DELETED';
   subscription: string;
   joinDate: string;
 }
 
-const mockUsers: User[] = [
-  {
-    id: 'USR-001',
-    name: 'Sarah Johnson',
-    email: 'sarah@example.com',
-    phone: '+1 (555) 123-4567',
-    role: 'Influencer',
-    status: 'Active',
-    subscription: 'Pro Plan',
-    joinDate: '2024-01-15',
-  },
-  {
-    id: 'USR-002',
-    name: 'Michael Chen',
-    email: 'michael@business.com',
-    phone: '+1 (555) 234-5678',
-    role: 'Business',
-    status: 'Active',
-    subscription: 'Enterprise',
-    joinDate: '2024-02-20',
-  },
-  {
-    id: 'USR-003',
-    name: 'Emma Davis',
-    email: 'emma@agency.com',
-    phone: '+1 (555) 345-6789',
-    role: 'Admin',
-    status: 'Active',
-    subscription: 'Premium',
-    joinDate: '2024-03-10',
-  },
-  {
-    id: 'USR-004',
-    name: 'James Wilson',
-    email: 'james@creative.com',
-    phone: '+1 (555) 999-9999',
-    role: 'Influencer',
-    status: 'Pending',
-    subscription: 'Free',
-    joinDate: '2024-11-28',
-  },
-  {
-    id: 'USR-005',
-    name: 'Lisa Anderson',
-    email: 'lisa@business.com',
-    phone: '+1 (555) 456-7890',
-    role: 'Business',
-    status: 'Suspended',
-    subscription: 'Pro Plan',
-    joinDate: '2023-12-05',
-  },
-  {
-    id: 'USR-006',
-    name: 'David Martinez',
-    email: 'david@agency.com',
-    phone: '+1 (555) 567-8901',
-    role: 'Admin',
-    status: 'Active',
-    subscription: 'Enterprise',
-    joinDate: '2024-04-12',
-  },
-  {
-    id: 'USR-007',
-    name: 'Sophie Turner',
-    email: 'sophie@creative.com',
-    phone: '+1 (555) 888-8888',
-    role: 'Influencer',
-    status: 'Active',
-    subscription: 'Premium',
-    joinDate: '2024-05-22',
-  },
-  {
-    id: 'USR-008',
-    name: 'Ryan Brooks',
-    email: 'ryan@business.com',
-    phone: '+1 (555) 678-9012',
-    role: 'Business',
-    status: 'Pending',
-    subscription: 'Free',
-    joinDate: '2024-11-30',
-  },
-];
-
-const statusConfig = {
-  Active: {
+const statusConfig: Record<string, { icon: ElementType; bg: string; text: string; border: string }> = {
+  ACTIVE: {
     icon: CheckCircle,
     bg: 'rgba(16, 185, 129, 0.1)',
     text: '#10b981',
     border: '#d1fae5'
   },
-  Suspended: {
+  INACTIVE: {
     icon: XCircle,
     bg: 'rgba(239, 68, 68, 0.1)',
     text: '#ef4444',
     border: '#fecaca'
   },
-  Pending: {
-    icon: Clock,
+  DEACTIVATED: {
+    icon: Ban,
+    bg: 'rgba(239, 68, 68, 0.1)',
+    text: '#ef4444',
+    border: '#fecaca'
+  },
+  RESTRICTED: {
+    icon: XCircle,
     bg: 'rgba(245, 158, 11, 0.1)',
     text: '#f59e0b',
     border: '#fef3c7'
   },
+  LOCKED: {
+    icon: XCircle,
+    bg: 'rgba(239, 68, 68, 0.1)',
+    text: '#ef4444',
+    border: '#fecaca'
+  },
+  DELETED: {
+    icon: Trash2,
+    bg: 'rgba(107, 114, 128, 0.1)',
+    text: '#6b7280',
+    border: '#e5e7eb'
+  },
 };
 
-const roleColors = {
-  Influencer: { bg: 'rgba(139, 92, 246, 0.1)', text: '#8b5cf6', border: '#ede9fe' },
-  Business: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
-  Admin: { bg: 'rgba(205, 27, 120, 0.1)', text: '#CD1B78', border: '#fce7f3' },
+const roleColors: Record<string, { bg: string; text: string; border: string }> = {
+  USER: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
+  ADMIN: { bg: 'rgba(205, 27, 120, 0.1)', text: '#CD1B78', border: '#fce7f3' },
+  CREATIVE: { bg: 'rgba(139, 92, 246, 0.1)', text: '#8b5cf6', border: '#ede9fe' },
+  BUSINESS: { bg: 'rgba(56, 189, 248, 0.1)', text: '#38bdf8', border: '#e0f2fe' },
+  AGENCY: { bg: 'rgba(99, 102, 241, 0.1)', text: '#6366f1', border: '#e0e7ff' },
 };
 
 export function UsersDataTable() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
+  const [countryFilter, setCountryFilter] = useState<string>('');
+  const [emailVerifiedFilter, setEmailVerifiedFilter] = useState<string>('all'); // all | verified | unverified
+  const [phoneVerifiedFilter, setPhoneVerifiedFilter] = useState<string>('all'); // all | verified | unverified
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const [showSendEmailModal, setShowSendEmailModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToSuspend, setUserToSuspend] = useState<User | null>(null);
+  const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
 
-  const filteredUsers = mockUsers.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
+  // Fetch real users from API
+  const { data: usersData, isLoading, error } = useUserList({
+    page: currentPage,
+    pageSize: 10,
+    search: searchQuery || undefined,
+    userType: roleFilter !== 'all' ? [roleFilter] : undefined,
+    userStatus: statusFilter !== 'all' ? [statusFilter] : undefined,
+    subscriptionStatus: subscriptionFilter !== 'all' ? [subscriptionFilter] : undefined,
+    country: countryFilter || undefined,
+    emailVerified:
+      emailVerifiedFilter === 'all'
+        ? undefined
+        : emailVerifiedFilter === 'verified'
+        ? true
+        : false,
+    phoneVerified:
+      phoneVerifiedFilter === 'all'
+        ? undefined
+        : phoneVerifiedFilter === 'verified'
+        ? true
+        : false,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    sortBy: sortBy || undefined,
+    sortOrder,
   });
 
-  const activeFiltersCount = (roleFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
+  console.log('[UsersDataTable] usersData:', usersData);
+  console.log('[UsersDataTable] isLoading:', isLoading);
+  console.log('[UsersDataTable] error:', error);
+
+  const users: User[] = (usersData?.users || []).map(user => ({
+    id: user.userId,
+    name: `${user.firstName} ${user.lastName}`,
+    email: user.email,
+    phone: user.phoneNumber || 'Not provided',
+    role: user.userType,
+    status: user.userStatus as User['status'],
+    subscription: user.subscriptionStatus || 'No subscription',
+    joinDate: user.dateCreated || '',
+  }));
+
+  console.log('[UsersDataTable] mapped users:', users);
+
+  const totalUsers = usersData?.total || 0;
+  const totalPages = usersData?.totalPages || 1;
+
+  const activeFiltersCount =
+    (roleFilter !== 'all' ? 1 : 0) +
+    (statusFilter !== 'all' ? 1 : 0) +
+    (subscriptionFilter !== 'all' ? 1 : 0) +
+    (countryFilter ? 1 : 0) +
+    (emailVerifiedFilter !== 'all' ? 1 : 0) +
+    (phoneVerifiedFilter !== 'all' ? 1 : 0) +
+    (dateFrom ? 1 : 0) +
+    (dateTo ? 1 : 0) +
+    (sortBy ? 1 : 0);
 
   const clearFilters = () => {
     setRoleFilter('all');
     setStatusFilter('all');
+    setSubscriptionFilter('all');
+    setCountryFilter('');
+    setEmailVerifiedFilter('all');
+    setPhoneVerifiedFilter('all');
+    setDateFrom('');
+    setDateTo('');
+    setSortBy('');
+    setSortOrder('desc');
   };
 
   const handleViewUser = (user: User) => {
@@ -171,11 +179,19 @@ export function UsersDataTable() {
   };
 
   const handleSendEmail = (user: User) => {
-    toast.success(`Email sent to ${user.email}`);
+    setSelectedUser(user);
+    setShowSendEmailModal(true);
   };
 
-  const handleResetPassword = (user: User) => {
-    toast.success(`Password reset link sent to ${user.email}`);
+  const resetPasswordMutation = useResetPassword();
+
+  const handleResetPassword = async (user: User) => {
+    try {
+      await resetPasswordMutation.mutateAsync(user.id);
+      toast.success(`Password reset link sent to ${user.email}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send password reset email');
+    }
   };
 
   const handleSuspendClick = (user: User) => {
@@ -183,10 +199,21 @@ export function UsersDataTable() {
     setShowSuspendConfirm(true);
   };
 
-  const confirmSuspend = () => {
+  const suspendUserMutation = useSuspendUser();
+
+  const confirmSuspend = async () => {
     if (userToSuspend) {
-      toast.success(`User ${userToSuspend.name} has been suspended`);
-      setUserToSuspend(null);
+      try {
+        await suspendUserMutation.mutateAsync({
+          userId: userToSuspend.id,
+          reason: 'Account suspended by administrator',
+        });
+        toast.success(`User ${userToSuspend.name} has been suspended successfully`);
+        setUserToSuspend(null);
+        setShowSuspendConfirm(false);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to suspend user');
+      }
     }
   };
 
@@ -195,10 +222,54 @@ export function UsersDataTable() {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = () => {
+  const deleteUserMutation = useDeleteUser();
+
+  const confirmDelete = async () => {
     if (userToDelete) {
-      toast.success(`User ${userToDelete.name} has been deleted`);
-      setUserToDelete(null);
+      try {
+        await deleteUserMutation.mutateAsync({
+          userId: userToDelete.id,
+          reason: 'Deleted by administrator',
+        });
+        toast.success(`User ${userToDelete.name} has been deleted successfully`);
+        setUserToDelete(null);
+        setShowDeleteConfirm(false);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to delete user');
+      }
+    }
+  };
+
+  const updateUserMutation = useUpdateUser();
+  const activateUserMutation = useActivateUser();
+
+  const handleDeactivateClick = (user: User) => {
+    setUserToDeactivate(user);
+    setShowDeactivateConfirm(true);
+  };
+
+  const confirmDeactivate = async () => {
+    if (userToDeactivate) {
+      try {
+        await updateUserMutation.mutateAsync({
+          userId: userToDeactivate.id,
+          data: { userStatus: 'DEACTIVATED' },
+        });
+        toast.success(`User ${userToDeactivate.name} has been deactivated successfully`);
+        setUserToDeactivate(null);
+        setShowDeactivateConfirm(false);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to deactivate user');
+      }
+    }
+  };
+
+  const handleActivateClick = async (user: User) => {
+    try {
+      await activateUserMutation.mutateAsync(user.id);
+      toast.success(`User ${user.name} has been activated successfully`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to activate user');
     }
   };
 
@@ -224,6 +295,28 @@ export function UsersDataTable() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {/* Add User */}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  background: '#CD1B78',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#A81563')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#CD1B78')}
+              >
+                <UserPlus style={{ width: '16px', height: '16px' }} />
+                Add User
+              </button>
               {/* Search */}
               <div style={{ position: 'relative', width: '280px' }}>
                 <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#9EA3AE' }} />
@@ -336,7 +429,7 @@ export function UsersDataTable() {
                 >
                   <div style={{ flex: '1', minWidth: '200px' }}>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
-                      Role
+                      User Type
                     </label>
                     <select
                       value={roleFilter}
@@ -352,10 +445,11 @@ export function UsersDataTable() {
                         outline: 'none',
                       }}
                     >
-                      <option value="all">All Roles</option>
-                      <option value="Influencer">Influencer</option>
-                      <option value="Business">Business</option>
-                      <option value="Admin">Admin</option>
+                      <option value="all">All Types</option>
+                      <option value="CREATIVE">Creative</option>
+                      <option value="BUSINESS">Business</option>
+                      <option value="AGENCY">Agency</option>
+                      <option value="ADMIN">Admin</option>
                     </select>
                   </div>
 
@@ -378,9 +472,198 @@ export function UsersDataTable() {
                       }}
                     >
                       <option value="all">All Statuses</option>
-                      <option value="Active">Active</option>
-                      <option value="Suspended">Suspended</option>
-                      <option value="Pending">Pending</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                      <option value="DEACTIVATED">Deactivated</option>
+                      <option value="RESTRICTED">Restricted</option>
+                      <option value="LOCKED">Locked</option>
+                      <option value="DELETED">Deleted</option>
+                    </select>
+                  </div>
+
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
+                      Subscription
+                    </label>
+                    <select
+                      value={subscriptionFilter}
+                      onChange={(e) => setSubscriptionFilter(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="all">All Subscriptions</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="EXPIRED">Expired</option>
+                    </select>
+                  </div>
+
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      value={countryFilter}
+                      onChange={(e) => setCountryFilter(e.target.value)}
+                      placeholder="e.g. Nigeria"
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: '#fff',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
+                      Email Verified
+                    </label>
+                    <select
+                      value={emailVerifiedFilter}
+                      onChange={(e) => setEmailVerifiedFilter(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="all">All</option>
+                      <option value="verified">Verified</option>
+                      <option value="unverified">Unverified</option>
+                    </select>
+                  </div>
+
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
+                      Phone Verified
+                    </label>
+                    <select
+                      value={phoneVerifiedFilter}
+                      onChange={(e) => setPhoneVerifiedFilter(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="all">All</option>
+                      <option value="verified">Verified</option>
+                      <option value="unverified">Unverified</option>
+                    </select>
+                  </div>
+
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
+                      Date From
+                    </label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: '#fff',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
+                      Date To
+                    </label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: '#fff',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
+                      Sort By
+                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">Default</option>
+                      <option value="dateCreated">Joined Date</option>
+                      <option value="firstName">First Name</option>
+                      <option value="lastName">Last Name</option>
+                      <option value="email">Email</option>
+                      <option value="userType">Role</option>
+                      <option value="userStatus">Status</option>
+                    </select>
+                  </div>
+
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '6px' }}>
+                      Sort Order
+                    </label>
+                    <select
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
                     </select>
                   </div>
 
@@ -417,7 +700,7 @@ export function UsersDataTable() {
               <tr>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>User</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>User ID</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Role</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Type</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Status</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Subscription</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F', borderBottom: '1px solid #E5E5E5' }}>Joined</th>
@@ -425,8 +708,23 @@ export function UsersDataTable() {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user, index) => {
-                const StatusIcon = statusConfig[user.status].icon;
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center' }}>
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" style={{ color: '#CD1B78', display: 'inline-block' }} />
+                  </td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#6C727F' }}>
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                users.map((user, index) => {
+                const StatusIcon = statusConfig[user.status]?.icon || CheckCircle;
+                const roleColor = roleColors[user.role] || { bg: 'rgba(107, 114, 128, 0.1)', text: '#6b7280', border: '#e5e7eb' };
+                const statusColor = statusConfig[user.status] || statusConfig.ACTIVE;
                 return (
                   <motion.tr
                     key={user.id}
@@ -492,10 +790,10 @@ export function UsersDataTable() {
                           padding: '4px 12px',
                           fontSize: '12px',
                           fontWeight: 600,
-                          backgroundColor: roleColors[user.role].bg,
-                          color: roleColors[user.role].text,
+                          backgroundColor: roleColor.bg,
+                          color: roleColor.text,
                           borderRadius: '8px',
-                          border: `1px solid ${roleColors[user.role].border}`,
+                          border: `1px solid ${roleColor.border}`,
                           display: 'inline-block',
                         }}
                       >
@@ -510,10 +808,10 @@ export function UsersDataTable() {
                           padding: '4px 12px',
                           fontSize: '12px',
                           fontWeight: 600,
-                          backgroundColor: statusConfig[user.status].bg,
-                          color: statusConfig[user.status].text,
+                          backgroundColor: statusColor.bg,
+                          color: statusColor.text,
                           borderRadius: '8px',
-                          border: `1px solid ${statusConfig[user.status].border}`,
+                          border: `1px solid ${statusColor.border}`,
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
@@ -615,6 +913,16 @@ export function UsersDataTable() {
                               icon: <Ban style={{ width: '16px', height: '16px' }} />,
                               onClick: () => handleSuspendClick(user),
                             },
+                            ...(user.status !== 'DEACTIVATED'
+                              ? [{
+                                label: 'Deactivate Account',
+                                icon: <XCircle style={{ width: '16px', height: '16px' }} />,
+                                onClick: () => handleDeactivateClick(user),
+                              }] : [{
+                                label: 'Activate Account',
+                                icon: <CheckCircle style={{ width: '16px', height: '16px' }} />,
+                                onClick: () => handleActivateClick(user),
+                              }]),
                             {
                               label: 'Delete User',
                               icon: <Trash2 style={{ width: '16px', height: '16px' }} />,
@@ -627,7 +935,8 @@ export function UsersDataTable() {
                     </td>
                   </motion.tr>
                 );
-              })}
+              })
+              )}
             </tbody>
           </table>
         </div>
@@ -635,37 +944,50 @@ export function UsersDataTable() {
         {/* Pagination */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #E5E5E5', flexWrap: 'wrap', gap: '16px' }}>
           <p style={{ fontSize: '14px', color: '#6C727F' }}>
-            Showing {filteredUsers.length} of {mockUsers.length} users
+            Showing {users.length} of {totalUsers} users (Page {currentPage} of {totalPages})
           </p>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              disabled
+              onClick={() => setCurrentPage(p => p - 1)}
+              disabled={currentPage === 1}
               style={{
                 padding: '8px 16px',
                 fontSize: '14px',
                 fontWeight: 500,
-                color: '#9EA3AE',
+                color: currentPage === 1 ? '#9EA3AE' : '#0d0e0f',
                 background: 'transparent',
                 border: '1px solid #E5E5E5',
                 borderRadius: '8px',
-                cursor: 'not-allowed',
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                if (currentPage !== 1) e.currentTarget.style.backgroundColor = '#F2F2F2';
+              }}
+              onMouseLeave={(e) => {
+                if (currentPage !== 1) e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
               Previous
             </button>
             <button
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={currentPage >= totalPages}
               style={{
                 padding: '8px 16px',
                 fontSize: '14px',
                 fontWeight: 500,
-                color: '#0d0e0f',
+                color: currentPage >= totalPages ? '#9EA3AE' : '#0d0e0f',
                 background: 'transparent',
                 border: '1px solid #E5E5E5',
                 borderRadius: '8px',
-                cursor: 'pointer',
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F2F2F2')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onMouseEnter={(e) => {
+                if (currentPage < totalPages) e.currentTarget.style.backgroundColor = '#F2F2F2';
+              }}
+              onMouseLeave={(e) => {
+                if (currentPage < totalPages) e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               Next
             </button>
@@ -726,10 +1048,10 @@ export function UsersDataTable() {
                     padding: '4px 12px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    backgroundColor: statusConfig[selectedUser.status].bg,
-                    color: statusConfig[selectedUser.status].text,
+                    backgroundColor: (statusConfig[selectedUser.status] || statusConfig.ACTIVE).bg,
+                    color: (statusConfig[selectedUser.status] || statusConfig.ACTIVE).text,
                     borderRadius: '8px',
-                    border: `1px solid ${statusConfig[selectedUser.status].border}`,
+                    border: `1px solid ${(statusConfig[selectedUser.status] || statusConfig.ACTIVE).border}`,
                     display: 'inline-block',
                   }}
                 >
@@ -746,10 +1068,10 @@ export function UsersDataTable() {
                     padding: '4px 12px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    backgroundColor: roleColors[selectedUser.role].bg,
-                    color: roleColors[selectedUser.role].text,
+                    backgroundColor: (roleColors[selectedUser.role] || { bg: 'rgba(107, 114, 128, 0.1)', text: '#6b7280', border: '#e5e7eb' }).bg,
+                    color: (roleColors[selectedUser.role] || { bg: 'rgba(107, 114, 128, 0.1)', text: '#6b7280', border: '#e5e7eb' }).text,
                     borderRadius: '8px',
-                    border: `1px solid ${roleColors[selectedUser.role].border}`,
+                    border: `1px solid ${(roleColors[selectedUser.role] || { bg: 'rgba(107, 114, 128, 0.1)', text: '#6b7280', border: '#e5e7eb' }).border}`,
                     display: 'inline-block',
                   }}
                 >
@@ -846,6 +1168,24 @@ export function UsersDataTable() {
         />
       )}
 
+      {/* Send Email Modal */}
+      {selectedUser && (
+        <SendEmailModal
+          isOpen={showSendEmailModal}
+          onClose={() => {
+            setShowSendEmailModal(false);
+            setSelectedUser(null);
+          }}
+          user={selectedUser}
+        />
+      )}
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
+
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={showDeleteConfirm}
@@ -872,6 +1212,21 @@ export function UsersDataTable() {
         title="Suspend User Account"
         message={`Are you sure you want to suspend ${userToSuspend?.name}'s account? They will not be able to access the platform until reactivated.`}
         confirmText="Suspend Account"
+        cancelText="Cancel"
+        variant="warning"
+      />
+
+      {/* Deactivate Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeactivateConfirm}
+        onClose={() => {
+          setShowDeactivateConfirm(false);
+          setUserToDeactivate(null);
+        }}
+        onConfirm={confirmDeactivate}
+        title="Deactivate User Account"
+        message={`Are you sure you want to deactivate ${userToDeactivate?.name}'s account? They will not be able to access the platform until activated.`}
+        confirmText="Deactivate Account"
         cancelText="Cancel"
         variant="warning"
       />

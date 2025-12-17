@@ -8,10 +8,12 @@ import { MetricCard } from '@/components/dashboard/overview/cards';
 import { LeadStatusChart, LeadsByPlatformChart } from '@/components/dashboard/leads/charts';
 import { RecentLeadsTable } from '@/components/dashboard/leads/tables';
 import { Loader2, Target, TrendingUp, CheckCircle, Clock } from 'lucide-react';
+import { useLeadAnalytics } from '@/hooks/useLeads';
 
 export default function LeadsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { data: analytics, isLoading: analyticsLoading } = useLeadAnalytics('LAST_30_DAYS');
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -43,32 +45,57 @@ export default function LeadsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
           title="Total Leads"
-          value="326"
-          change={18.3}
+          value={(() => {
+            if (analyticsLoading) return '...';
+            const total = (analytics?.new_leads || 0) + (analytics?.contacted || 0) + (analytics?.qualified || 0) + (analytics?.unqualified || 0) + (analytics?.converted || 0);
+            return total.toLocaleString();
+          })()}
+          change={0}
           icon={Target}
           iconColor="#CD1B78"
           index={0}
         />
         <MetricCard
           title="Qualified Leads"
-          value="67"
-          change={8.2}
+          value={analyticsLoading ? '...' : (analytics?.qualified || 0).toLocaleString()}
+          change={0}
           icon={CheckCircle}
           iconColor="#10b981"
           index={1}
         />
         <MetricCard
           title="Conversion Rate"
-          value="20.5%"
-          change={-2.3}
+          value={(() => {
+            if (analyticsLoading) return '...';
+            const qualified = analytics?.qualified || 0;
+            const converted = analytics?.converted || 0;
+            const rate = qualified > 0 ? (converted / qualified) * 100 : 0;
+            return `${rate.toFixed(1)}%`;
+          })()}
+          change={0}
           icon={TrendingUp}
           iconColor="#f59e0b"
           index={2}
         />
         <MetricCard
           title="Avg Intent Score"
-          value="0.84"
-          change={5.4}
+          value={(() => {
+            if (analyticsLoading) return '...';
+            const interest = analytics?.interest_by_platform || {};
+            let total = 0;
+            let weighted = 0;
+            const scoreMap: Record<string, number> = { High: 1, Medium: 0.5, Low: 0 };
+            Object.values(interest).forEach((levels) => {
+              Object.entries(levels).forEach(([level, count]) => {
+                const c = typeof count === 'number' ? count : 0;
+                total += c;
+                weighted += c * (scoreMap[level] ?? 0);
+              });
+            });
+            const avg = total > 0 ? weighted / total : 0;
+            return avg.toFixed(2);
+          })()}
+          change={0}
           icon={Clock}
           iconColor="#3b82f6"
           index={3}
@@ -76,8 +103,23 @@ export default function LeadsPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-        <LeadStatusChart />
-        <LeadsByPlatformChart />
+        <LeadStatusChart
+          data={(() => {
+            const d = analytics;
+            return [
+              { name: 'New', value: d?.new_leads || 0, color: '#3b82f6' },
+              { name: 'Contacted', value: d?.contacted || 0, color: '#10b981' },
+              { name: 'Qualified', value: d?.qualified || 0, color: '#f59e0b' },
+              { name: 'Converted', value: d?.converted || 0, color: '#CD1B78' },
+            ];
+          })()}
+        />
+        <LeadsByPlatformChart
+          data={(() => {
+            const breakdown = analytics?.lead_sources_breakdown || {};
+            return Object.entries(breakdown).map(([platform, count]) => ({ platform, count: typeof count === 'number' ? count : 0 }));
+          })()}
+        />
       </div>
 
       <RecentLeadsTable />

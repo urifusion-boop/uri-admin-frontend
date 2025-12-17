@@ -15,6 +15,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   return (
     <Sonner
+      position="top-right"
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{
@@ -24,14 +25,27 @@ const Toaster = ({ ...props }: ToasterProps) => {
         error: <OctagonXIcon className="size-4" />,
         loading: <Loader2Icon className="size-4 animate-spin" />,
       }}
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
+      toastOptions={{
+        style: {
+          background: '#ffffff',
+          border: '1px solid #E5E5E5',
+          borderRadius: '12px',
+          padding: '16px',
+          fontSize: '14px',
+          fontWeight: '500',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+        },
+        classNames: {
+          toast: 'group toast group-[.toaster]:bg-white group-[.toaster]:text-[#0d0e0f] group-[.toaster]:border-[#E5E5E5] group-[.toaster]:shadow-lg',
+          description: 'group-[.toast]:text-[#6C727F]',
+          actionButton: 'group-[.toast]:bg-[#CD1B78] group-[.toast]:text-white group-[.toast]:hover:bg-[#a01560]',
+          cancelButton: 'group-[.toast]:bg-[#F2F2F2] group-[.toast]:text-[#0d0e0f]',
+          success: 'group-[.toast]:text-[#10b981]',
+          error: 'group-[.toast]:text-[#ef4444]',
+          warning: 'group-[.toast]:text-[#f59e0b]',
+          info: 'group-[.toast]:text-[#3b82f6]',
+        },
+      }}
       {...props}
     />
   )

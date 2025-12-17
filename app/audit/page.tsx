@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuditAnalytics } from '@/hooks/useAudit';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { MetricCard } from '@/components/dashboard/overview/cards';
 import { AuditLogsTable } from '@/components/dashboard/audit/tables';
@@ -11,6 +12,7 @@ import { Loader2, Shield, Eye, Lock, AlertTriangle } from 'lucide-react';
 export default function AuditPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { data: analytics, isLoading: analyticsLoading } = useAuditAnalytics();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -42,32 +44,32 @@ export default function AuditPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
           title="Total Events"
-          value="45,234"
-          change={8.2}
+          value={analyticsLoading ? '...' : analytics?.totalEvents.toLocaleString() || '0'}
+          change={analytics?.totalEventsChange || 0}
           icon={Eye}
           iconColor="#3b82f6"
           index={0}
         />
         <MetricCard
           title="Security Events"
-          value="324"
-          change={-12.5}
+          value={analyticsLoading ? '...' : analytics?.securityEvents.toLocaleString() || '0'}
+          change={analytics?.securityEventsChange || 0}
           icon={Shield}
           iconColor="#10b981"
           index={1}
         />
         <MetricCard
           title="Auth Attempts"
-          value="12,543"
-          change={5.3}
+          value={analyticsLoading ? '...' : analytics?.authAttempts.toLocaleString() || '0'}
+          change={analytics?.authAttemptsChange || 0}
           icon={Lock}
           iconColor="#CD1B78"
           index={2}
         />
         <MetricCard
           title="Alerts"
-          value="8"
-          change={-3.2}
+          value={analyticsLoading ? '...' : analytics?.alerts.toLocaleString() || '0'}
+          change={analytics?.alertsChange || 0}
           icon={AlertTriangle}
           iconColor="#f59e0b"
           index={3}

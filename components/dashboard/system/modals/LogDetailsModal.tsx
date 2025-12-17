@@ -1,7 +1,6 @@
 'use client';
 
 import { Modal } from '@/components/common/Modal';
-import { X } from 'lucide-react';
 
 interface LogDetailsModalProps {
   isOpen: boolean;
@@ -16,9 +15,20 @@ interface LogDetailsModalProps {
   };
 }
 
+interface LogExtraDetails {
+  statusCode: number;
+  endpoint: string;
+  stackTrace: string;
+  userAgent: string;
+  ipAddress: string;
+  fullTimestamp: string;
+  requestBody: string | null;
+  responseTime: string;
+}
+
 // Extended log details
 const getLogDetails = (logId: string) => {
-  const detailsMap: { [key: string]: any } = {
+  const detailsMap: Record<string, LogExtraDetails> = {
     '1': {
       statusCode: 500,
       endpoint: '/api/v1/users',

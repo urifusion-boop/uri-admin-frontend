@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useFinanceOverview } from '@/hooks/useFinance';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { MetricCard } from '@/components/dashboard/overview/cards';
 import { TransactionsTable } from '@/components/dashboard/finance/tables';
@@ -13,12 +14,23 @@ import { Loader2, DollarSign, TrendingUp, CreditCard, RefreshCw } from 'lucide-r
 export default function FinancePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { data: financeData, isLoading: financeLoading } = useFinanceOverview();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  // Format currency helper
+  const formatCurrency = (amount: number, currency: string = 'NGN') => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   if (isLoading) {
     return (
@@ -46,32 +58,32 @@ export default function FinancePage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
           title="Total Revenue"
-          value="$95,420"
-          change={8.2}
+          value={financeLoading ? '...' : formatCurrency(financeData?.totalRevenue || 0, financeData?.currency)}
+          change={financeData?.totalRevenueChange || 0}
           icon={DollarSign}
           iconColor="#10b981"
           index={0}
         />
         <MetricCard
           title="MRR"
-          value="$45,230"
-          change={12.5}
+          value={financeLoading ? '...' : formatCurrency(financeData?.monthlyRecurringRevenue || 0, financeData?.currency)}
+          change={financeData?.mrrChange || 0}
           icon={TrendingUp}
           iconColor="#CD1B78"
           index={1}
         />
         <MetricCard
           title="Active Subscriptions"
-          value="3,842"
-          change={15.3}
+          value={financeLoading ? '...' : financeData?.activeSubscriptions.toLocaleString() || '0'}
+          change={financeData?.activeSubscriptionsChange || 0}
           icon={CreditCard}
           iconColor="#3b82f6"
           index={2}
         />
         <MetricCard
-          title="Churn Rate"
-          value="2.1%"
-          change={-0.5}
+          title="ARPU"
+          value={financeLoading ? '...' : formatCurrency(financeData?.averageRevenuePerUser || 0, financeData?.currency)}
+          change={financeData?.arpuChange || 0}
           icon={RefreshCw}
           iconColor="#f59e0b"
           index={3}

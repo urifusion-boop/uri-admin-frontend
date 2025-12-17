@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/common/Modal';
-import { Search, Filter, X, Download, Eye } from 'lucide-react';
+import { Search, Filter, X, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRecentActivity } from '@/hooks/useSystem';
 
 interface Activity {
   id: string;
@@ -26,92 +27,6 @@ interface AllActivitiesModalProps {
   onClose: () => void;
 }
 
-const allActivities: Activity[] = [
-  {
-    id: 'ACT-001',
-    user: { name: 'Sarah Johnson', email: 'sarah@example.com' },
-    action: 'Upgraded to Pro Plan',
-    type: 'subscription',
-    timestamp: '2024-12-08 14:23:45',
-    metadata: '$49.99/mo',
-    ipAddress: '192.168.1.100',
-    device: 'Chrome on Windows',
-    location: 'New York, USA',
-  },
-  {
-    id: 'ACT-002',
-    user: { name: 'Michael Chen', email: 'michael@business.com' },
-    action: 'New business account created',
-    type: 'user',
-    timestamp: '2024-12-08 14:08:12',
-    ipAddress: '10.0.0.45',
-    device: 'Safari on macOS',
-    location: 'San Francisco, USA',
-  },
-  {
-    id: 'ACT-003',
-    user: { name: 'Emma Davis', email: 'emma@agency.com' },
-    action: 'Submitted new lead',
-    type: 'lead',
-    timestamp: '2024-12-08 13:45:30',
-    metadata: 'Fashion Campaign',
-    ipAddress: '172.16.0.12',
-    device: 'Chrome on Android',
-    location: 'London, UK',
-  },
-  {
-    id: 'ACT-004',
-    user: { name: 'James Wilson', email: 'james@creative.com' },
-    action: 'Published new portfolio',
-    type: 'content',
-    timestamp: '2024-12-08 12:30:15',
-    ipAddress: '192.168.1.50',
-    device: 'Firefox on Windows',
-    location: 'Toronto, Canada',
-  },
-  {
-    id: 'ACT-005',
-    user: { name: 'System', email: 'system@uri.com' },
-    action: 'Database backup completed',
-    type: 'system',
-    timestamp: '2024-12-08 11:15:00',
-    ipAddress: '127.0.0.1',
-    device: 'Server',
-    location: 'AWS us-east-1',
-  },
-  {
-    id: 'ACT-006',
-    user: { name: 'Lisa Anderson', email: 'lisa@startup.io' },
-    action: 'Cancelled subscription',
-    type: 'subscription',
-    timestamp: '2024-12-08 10:50:22',
-    ipAddress: '192.168.2.33',
-    device: 'Chrome on macOS',
-    location: 'Austin, USA',
-  },
-  {
-    id: 'ACT-007',
-    user: { name: 'David Brown', email: 'david@tech.com' },
-    action: 'Updated profile information',
-    type: 'user',
-    timestamp: '2024-12-08 10:20:10',
-    ipAddress: '10.0.1.200',
-    device: 'Edge on Windows',
-    location: 'Seattle, USA',
-  },
-  {
-    id: 'ACT-008',
-    user: { name: 'Sophie Taylor', email: 'sophie@design.co' },
-    action: 'Uploaded new content',
-    type: 'content',
-    timestamp: '2024-12-08 09:45:55',
-    metadata: 'Brand Assets',
-    ipAddress: '192.168.3.100',
-    device: 'Safari on iOS',
-    location: 'Los Angeles, USA',
-  },
-];
-
 const typeColors = {
   subscription: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', border: '#d1fae5' },
   user: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
@@ -125,6 +40,26 @@ export function AllActivitiesModal({ isOpen, onClose }: AllActivitiesModalProps)
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const { data: recentActivityData } = useRecentActivity(100);
+
+  const allActivities: Activity[] = (recentActivityData || []).map(activity => {
+    const rt = (activity.resourceType ?? '').toLowerCase();
+    const normalizedType: Activity['type'] =
+      rt === 'subscription' || rt === 'user' || rt === 'lead' || rt === 'content' || rt === 'system'
+        ? (rt as Activity['type'])
+        : 'user';
+    return {
+      id: activity.activityId,
+      user: {
+        name: activity.userName,
+        email: activity.userEmail,
+      },
+      action: activity.action,
+      type: normalizedType,
+      timestamp: activity.timestamp,
+      metadata: activity.details,
+    };
+  });
 
   const filteredActivities = allActivities.filter((activity) => {
     const matchesSearch =

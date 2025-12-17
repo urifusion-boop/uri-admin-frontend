@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Filter, Download, Twitter, Facebook, Instagram, Linkedin } from 'lucide-react';
+import { Search, Filter, Download, Twitter, Facebook, Instagram, Linkedin, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useRecentLeads } from '@/hooks/useLeads';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Lead {
   id: string;
@@ -10,68 +12,48 @@ interface Lead {
   platform: string;
   intentScore: number;
   relevanceScore: number;
-  status: 'New' | 'Contacted' | 'Qualified' | 'Converted';
+  status: string;
   createdDate: string;
   email?: string;
 }
 
-const recentLeads: Lead[] = [
-  {
-    id: '1',
-    name: 'Sarah Johnson',
-    platform: 'Twitter',
-    intentScore: 0.87,
-    relevanceScore: 0.92,
-    status: 'New',
-    createdDate: '2 hours ago',
-    email: 'sarah.j@example.com',
-  },
-  {
-    id: '2',
-    name: 'Michael Chen',
-    platform: 'LinkedIn',
-    intentScore: 0.91,
-    relevanceScore: 0.88,
-    status: 'Contacted',
-    createdDate: '5 hours ago',
-    email: 'm.chen@business.com',
-  },
-  {
-    id: '3',
-    name: 'Emma Davis',
-    platform: 'Facebook',
-    intentScore: 0.79,
-    relevanceScore: 0.85,
-    status: 'Qualified',
-    createdDate: '1 day ago',
-    email: 'emma.davis@agency.com',
-  },
-];
-
-const statusColors = {
-  New: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
-  Contacted: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', border: '#d1fae5' },
-  Qualified: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', border: '#fef3c7' },
-  Converted: { bg: 'rgba(205, 27, 120, 0.1)', text: '#CD1B78', border: '#fce4ec' },
+const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+  NEW: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
+  CONTACTED: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', border: '#d1fae5' },
+  QUALIFIED: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', border: '#fef3c7' },
+  CONVERTED: { bg: 'rgba(205, 27, 120, 0.1)', text: '#CD1B78', border: '#fce4ec' },
+  UNQUALIFIED: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', border: '#fee2e2' },
 };
 
 const platformIcons: Record<string, React.ReactNode> = {
-  Twitter: <Twitter size={16} />,
-  Facebook: <Facebook size={16} />,
-  Instagram: <Instagram size={16} />,
-  LinkedIn: <Linkedin size={16} />,
+  TWITTER: <Twitter size={16} />,
+  FACEBOOK: <Facebook size={16} />,
+  INSTAGRAM: <Instagram size={16} />,
+  LINKEDIN: <Linkedin size={16} />,
+  X: <Twitter size={16} />,
 };
 
 export function RecentLeadsTable() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { data: leadsData, isLoading } = useRecentLeads(50, 0, statusFilter === 'all' ? undefined : statusFilter);
 
-  const filteredLeads = recentLeads.filter((lead) => {
+  const leads: Lead[] = (leadsData?.leads || []).map(lead => ({
+    id: lead.lead_id,
+    name: lead.name,
+    email: lead.email,
+    platform: lead.platform,
+    status: lead.status,
+    intentScore: lead.intent_score || 0,
+    relevanceScore: lead.relevance_score || 0,
+    createdDate: lead.created_date,
+  }));
+
+  const filteredLeads = leads.filter((lead) => {
     const matchesSearch =
       lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   return (
@@ -164,36 +146,46 @@ export function RecentLeadsTable() {
           }}
         >
           <option value="all">All Status</option>
-          <option value="New">New</option>
-          <option value="Contacted">Contacted</option>
-          <option value="Qualified">Qualified</option>
-          <option value="Converted">Converted</option>
+          <option value="NEW">New</option>
+          <option value="CONTACTED">Contacted</option>
+          <option value="QUALIFIED">Qualified</option>
+          <option value="CONVERTED">Converted</option>
+          <option value="UNQUALIFIED">Unqualified</option>
         </select>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #E5E5E5' }}>
-              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
-                Lead Name
-              </th>
-              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
-                Platform
-              </th>
-              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
-                Intent Score
-              </th>
-              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
-                Status
-              </th>
-              <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
-                Created
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLeads.map((lead, index) => (
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : filteredLeads.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#6C727F' }}>
+          <p>No leads found</p>
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #E5E5E5' }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
+                  Lead Name
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
+                  Platform
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
+                  Intent Score
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
+                  Status
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
+                  Created
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLeads.map((lead, index) => (
               <motion.tr
                 key={lead.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -211,7 +203,7 @@ export function RecentLeadsTable() {
                 </td>
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6C727F' }}>
-                    {platformIcons[lead.platform]}
+                    {platformIcons[lead.platform.toUpperCase()] || platformIcons['TWITTER']}
                     <span style={{ fontSize: '14px' }}>{lead.platform}</span>
                   </div>
                 </td>
@@ -247,23 +239,26 @@ export function RecentLeadsTable() {
                       padding: '4px 12px',
                       fontSize: '12px',
                       fontWeight: 600,
-                      backgroundColor: statusColors[lead.status].bg,
-                      color: statusColors[lead.status].text,
+                      backgroundColor: statusColors[lead.status.toUpperCase()]?.bg || statusColors['NEW'].bg,
+                      color: statusColors[lead.status.toUpperCase()]?.text || statusColors['NEW'].text,
                       borderRadius: '6px',
-                      border: `1px solid ${statusColors[lead.status].border}`,
+                      border: `1px solid ${statusColors[lead.status.toUpperCase()]?.border || statusColors['NEW'].border}`,
                     }}
                   >
                     {lead.status}
                   </span>
                 </td>
                 <td style={{ padding: '16px' }}>
-                  <span style={{ fontSize: '13px', color: '#6C727F' }}>{lead.createdDate}</span>
+                  <span style={{ fontSize: '13px', color: '#6C727F' }}>
+                    {formatDistanceToNow(new Date(lead.createdDate), { addSuffix: true })}
+                  </span>
                 </td>
               </motion.tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

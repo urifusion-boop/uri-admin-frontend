@@ -3,8 +3,8 @@
 import { createContext, useContext, useCallback, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthHelper, TokenDetails, AdminUser } from '@/lib/auth';
-import { AuthService, LoginDto, LoginResponseDto } from '@/lib/api/auth-service';
-import { UserService, UserDto } from '@/lib/api/user-service';
+import { AuthService } from '@/lib/api/auth-service';
+import { UserService } from '@/lib/api/user-service';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -64,10 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           AuthHelper.saveTokens(tokens);
 
           // Parse JWT to get user ID
-          const parsedToken = AuthHelper.parseJwt(loginData.accessToken);
+          const parsedToken = AuthHelper.parseJwt(loginData.accessToken) as {
+            claims?: { userId?: string; email?: string; role?: string };
+            userId?: string;
+            email?: string;
+            role?: string;
+          } | null;
 
           // Backend JWT has claims nested inside a 'claims' property
-          const claims = parsedToken.claims || parsedToken;
+          const claims = parsedToken?.claims || parsedToken;
 
           if (!claims?.userId) {
             throw new Error('Invalid token: No userId in claims');
@@ -109,8 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           toast.error(response.responseMessage || 'Login failed');
         }
-      } catch (error: any) {
-        toast.error(error.response?.data?.responseMessage || error.message || 'An error occurred during login');
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { responseMessage?: string } } ; message?: string };
+        toast.error(err.response?.data?.responseMessage || err.message || 'An error occurred during login');
       } finally {
         setIsLoading(false);
       }

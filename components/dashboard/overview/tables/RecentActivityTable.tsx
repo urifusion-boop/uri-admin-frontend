@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AllActivitiesModal } from '../modals/AllActivitiesModal';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Loader2 } from 'lucide-react';
+import { useRecentActivity } from '@/hooks/useSystem';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Activity {
   id: string;
@@ -18,46 +20,6 @@ interface Activity {
   metadata?: string;
 }
 
-const activities: Activity[] = [
-  {
-    id: '1',
-    user: { name: 'Sarah Johnson', email: 'sarah@example.com' },
-    action: 'Upgraded to Pro Plan',
-    type: 'subscription',
-    timestamp: '2 minutes ago',
-    metadata: '$49.99/mo',
-  },
-  {
-    id: '2',
-    user: { name: 'Michael Chen', email: 'michael@business.com' },
-    action: 'New business account created',
-    type: 'user',
-    timestamp: '15 minutes ago',
-  },
-  {
-    id: '3',
-    user: { name: 'Emma Davis', email: 'emma@agency.com' },
-    action: 'Submitted new lead',
-    type: 'lead',
-    timestamp: '1 hour ago',
-    metadata: 'Fashion Campaign',
-  },
-  {
-    id: '4',
-    user: { name: 'James Wilson', email: 'james@creative.com' },
-    action: 'Published new portfolio',
-    type: 'content',
-    timestamp: '2 hours ago',
-  },
-  {
-    id: '5',
-    user: { name: 'System', email: 'system@uri.com' },
-    action: 'Database backup completed',
-    type: 'system',
-    timestamp: '3 hours ago',
-  },
-];
-
 const typeColors = {
   subscription: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', border: '#d1fae5' },
   user: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
@@ -68,6 +30,26 @@ const typeColors = {
 
 export function RecentActivityTable() {
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const { data: recentActivityData, isLoading } = useRecentActivity(10);
+
+  const activities: Activity[] = (recentActivityData || []).map(activity => {
+    const rt = (activity.resourceType ?? '').toLowerCase();
+    const normalizedType: Activity['type'] =
+      rt === 'subscription' || rt === 'user' || rt === 'lead' || rt === 'content' || rt === 'system'
+        ? (rt as Activity['type'])
+        : 'user';
+    return {
+      id: activity.activityId,
+      user: {
+        name: activity.userName,
+        email: activity.userEmail,
+      },
+      action: activity.action,
+      type: normalizedType,
+      timestamp: activity.timestamp,
+      metadata: activity.details,
+    };
+  });
 
   return (
     <>
@@ -89,92 +71,102 @@ export function RecentActivityTable() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gap: '10px' }}>
-          {activities.map((activity, index) => (
-            <motion.div
-              key={activity.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                padding: '14px',
-                borderRadius: '12px',
-                border: '1px solid #F0F0F0',
-                backgroundColor: '#FAFAFA',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F3F4F6';
-                e.currentTarget.style.borderColor = '#CD1B78';
-                e.currentTarget.style.transform = 'translateX(4px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#FAFAFA';
-                e.currentTarget.style.borderColor = '#F0F0F0';
-                e.currentTarget.style.transform = 'translateX(0)';
-              }}
-            >
-              {/* Avatar */}
-              <div
+        {isLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" style={{ color: '#CD1B78' }} />
+          </div>
+        ) : activities.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#6C727F' }}>
+            <p>No recent activity</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '10px' }}>
+            {activities.map((activity, index) => (
+              <motion.div
+                key={activity.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
                 style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #CD1B78 0%, #9333ea 100%)',
-                  color: '#fff',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  flexShrink: 0,
-                  boxShadow: '0 2px 8px rgba(205, 27, 120, 0.2)',
+                  gap: '14px',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: '1px solid #F0F0F0',
+                  backgroundColor: '#FAFAFA',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F3F4F6';
+                  e.currentTarget.style.borderColor = '#CD1B78';
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#FAFAFA';
+                  e.currentTarget.style.borderColor = '#F0F0F0';
+                  e.currentTarget.style.transform = 'translateX(0)';
                 }}
               >
-                {activity.user.name.split(' ').map((n) => n[0]).join('').toUpperCase()}
-              </div>
-
-              {/* Details */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px', flexWrap: 'wrap' }}>
-                  <p style={{ fontWeight: 600, fontSize: '14px', color: '#0d0e0f', margin: 0 }}>
-                    {activity.user.name}
-                  </p>
-                  <span
-                    style={{
-                      padding: '3px 8px',
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      backgroundColor: typeColors[activity.type].bg,
-                      color: typeColors[activity.type].text,
-                      borderRadius: '6px',
-                      border: `1px solid ${typeColors[activity.type].border}`,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {activity.type}
-                  </span>
+                {/* Avatar */}
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #CD1B78 0%, #9333ea 100%)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(205, 27, 120, 0.2)',
+                  }}
+                >
+                  {activity.user.name.split(' ').map((n) => n[0]).join('').toUpperCase()}
                 </div>
-                <p style={{ fontSize: '13px', color: '#0d0e0f', margin: '0 0 2px 0' }}>{activity.action}</p>
-                {activity.metadata && (
-                  <p style={{ fontSize: '12px', color: '#9EA3AE', margin: 0, fontWeight: 500 }}>
-                    {activity.metadata}
-                  </p>
-                )}
-              </div>
 
-              {/* Timestamp with arrow */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#9EA3AE', whiteSpace: 'nowrap' }}>
-                <span>{activity.timestamp}</span>
-                <ArrowUpRight size={14} style={{ color: '#CD1B78', opacity: 0.7 }} />
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                {/* Details */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px', flexWrap: 'wrap' }}>
+                    <p style={{ fontWeight: 600, fontSize: '14px', color: '#0d0e0f', margin: 0 }}>
+                      {activity.user.name}
+                    </p>
+                    <span
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        backgroundColor: typeColors[activity.type].bg,
+                        color: typeColors[activity.type].text,
+                        borderRadius: '6px',
+                        border: `1px solid ${typeColors[activity.type].border}`,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {activity.type}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: '0 0 2px 0' }}>{activity.action}</p>
+                  {activity.metadata && (
+                    <p style={{ fontSize: '12px', color: '#9EA3AE', margin: 0, fontWeight: 500 }}>
+                      {activity.metadata}
+                    </p>
+                  )}
+                </div>
+
+                {/* Timestamp with arrow */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#9EA3AE', whiteSpace: 'nowrap' }}>
+                  <span>{formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}</span>
+                  <ArrowUpRight size={14} style={{ color: '#CD1B78', opacity: 0.7 }} />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <button
           onClick={() => setShowAllActivities(true)}

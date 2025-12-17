@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -12,10 +11,10 @@ import {
   FileText,
   MessageSquare,
   Shield,
-  ChevronDown,
   HelpCircle,
 } from 'lucide-react';
 import Image from 'next/image';
+import { useDashboardMetrics } from '@/hooks/useDashboard';
 
 interface NavItem {
   label: string;
@@ -27,9 +26,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Overview', icon: LayoutDashboard, route: '/dashboard' },
-  { label: 'Users', icon: Users, route: '/users', badge: '1.2K' },
+  { label: 'Users', icon: Users, route: '/users' },
   { label: 'Finance', icon: DollarSign, route: '/finance' },
-  { label: 'Leads', icon: Target, route: '/leads', badge: '234' },
+  { label: 'Leads', icon: Target, route: '/leads' },
   { label: 'System', icon: Settings, route: '/system' },
   { label: 'Content', icon: FileText, route: '/content' },
   { label: 'Support', icon: MessageSquare, route: '/support' },
@@ -47,16 +46,10 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ open }: AdminSidebarProps) {
   const pathname = usePathname();
-  const [expandedLinks, setExpandedLinks] = useState<{ [key: string]: boolean }>({});
+  const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics();
 
   const activeLink = (route: string) => pathname === route || pathname?.startsWith(route + '/');
 
-  const toggleLink = (linkName: string) => {
-    setExpandedLinks((prev) => ({
-      ...prev,
-      [linkName]: !prev[linkName],
-    }));
-  };
 
   return (
     <div
@@ -99,10 +92,10 @@ export function AdminSidebar({ open }: AdminSidebarProps) {
             const Icon = item.icon;
             const isActive = activeLink(item.route);
 
-            return (
-              <Link key={item.route} href={item.route}>
-                <div style={{ padding: `0px ${open ? '16px' : '12px'}`, marginBottom: '4px' }}>
-                  <div
+          return (
+            <Link key={item.route} href={item.route}>
+              <div style={{ padding: `0px ${open ? '16px' : '12px'}`, marginBottom: '4px' }}>
+                <div
                     style={{
                       padding: '12px',
                       borderRadius: '12px',
@@ -138,10 +131,21 @@ export function AdminSidebar({ open }: AdminSidebarProps) {
                             color: isActive ? 'white' : '#0d0e0f',
                             whiteSpace: 'nowrap',
                           }}
-                        >
+                          >
                           {item.label}
                         </span>
-                        {item.badge && (
+                        {(() => {
+                          let badgeToShow: string | undefined;
+                          if (item.label === 'Users') {
+                            if (metricsLoading) badgeToShow = '...';
+                            else if (typeof metrics?.totalUsers === 'number') badgeToShow = metrics.totalUsers.toLocaleString();
+                          } else if (item.label === 'Leads') {
+                            if (metricsLoading) badgeToShow = '...';
+                            else if (typeof metrics?.leadsGeneratedThisMonth === 'number') badgeToShow = metrics.leadsGeneratedThisMonth.toLocaleString();
+                          } else if (item.badge) {
+                            badgeToShow = item.badge;
+                          }
+                          return badgeToShow ? (
                           <span
                             style={{
                               marginLeft: 'auto',
@@ -153,9 +157,10 @@ export function AdminSidebar({ open }: AdminSidebarProps) {
                               borderRadius: '12px',
                             }}
                           >
-                            {item.badge}
+                            {badgeToShow}
                           </span>
-                        )}
+                          ) : null;
+                        })()}
                       </>
                     )}
                   </div>

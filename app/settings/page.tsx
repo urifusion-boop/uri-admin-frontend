@@ -6,6 +6,58 @@ import { useAuth } from '@/hooks/useAuth';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Loader2, Settings, Database, Shield, Bell } from 'lucide-react';
 
+type ToggleSettingProps = {
+  label: string;
+  description: string;
+  enabled: boolean;
+  onChange: (value: boolean) => void;
+};
+
+const ToggleSetting = ({ label, description, enabled, onChange }: ToggleSettingProps) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '16px',
+      borderRadius: '12px',
+      backgroundColor: '#F9FAFB',
+      marginBottom: '12px',
+    }}
+  >
+    <div style={{ flex: 1 }}>
+      <p style={{ fontSize: '15px', fontWeight: 600, color: '#0d0e0f', marginBottom: '4px' }}>{label}</p>
+      <p style={{ fontSize: '13px', color: '#6C727F' }}>{description}</p>
+    </div>
+    <button
+      onClick={() => onChange(!enabled)}
+      style={{
+        position: 'relative',
+        width: '52px',
+        height: '28px',
+        borderRadius: '14px',
+        backgroundColor: enabled ? '#CD1B78' : '#E5E7EB',
+        border: 'none',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: '2px',
+          left: enabled ? '26px' : '2px',
+          width: '24px',
+          height: '24px',
+          borderRadius: '50%',
+          backgroundColor: '#fff',
+          transition: 'left 0.2s',
+        }}
+      />
+    </button>
+  </div>
+);
+
 export default function SettingsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
@@ -30,51 +82,6 @@ export default function SettingsPage() {
   if (!isAuthenticated) {
     return null;
   }
-
-  const ToggleSetting = ({ label, description, enabled, onChange }: any) => (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px',
-        borderRadius: '12px',
-        backgroundColor: '#F9FAFB',
-        marginBottom: '12px',
-      }}
-    >
-      <div style={{ flex: 1 }}>
-        <p style={{ fontSize: '15px', fontWeight: 600, color: '#0d0e0f', marginBottom: '4px' }}>{label}</p>
-        <p style={{ fontSize: '13px', color: '#6C727F' }}>{description}</p>
-      </div>
-      <button
-        onClick={() => onChange(!enabled)}
-        style={{
-          position: 'relative',
-          width: '52px',
-          height: '28px',
-          borderRadius: '14px',
-          backgroundColor: enabled ? '#CD1B78' : '#E5E7EB',
-          border: 'none',
-          cursor: 'pointer',
-          transition: 'background-color 0.2s',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: '2px',
-            left: enabled ? '26px' : '2px',
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            backgroundColor: '#fff',
-            transition: 'left 0.2s',
-          }}
-        />
-      </button>
-    </div>
-  );
 
   return (
     <AdminLayout>
@@ -127,7 +134,7 @@ export default function SettingsPage() {
             label="IP Whitelisting"
             description="Restrict admin access to specific IPs"
             enabled={false}
-            onChange={() => {}}
+            onChange={() => { }}
           />
         </div>
 
@@ -172,7 +179,7 @@ export default function SettingsPage() {
             label="Failed Payment Alerts"
             description="Get notified when payments fail"
             enabled={true}
-            onChange={() => {}}
+            onChange={() => { }}
           />
         </div>
 
@@ -217,7 +224,7 @@ export default function SettingsPage() {
             label="Automatic Backups"
             description="Backup database every 24 hours"
             enabled={true}
-            onChange={() => {}}
+            onChange={() => { }}
           />
         </div>
 

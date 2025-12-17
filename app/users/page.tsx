@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserGrowthTrend } from '@/hooks/useUsers';
+import { useDashboardMetrics } from '@/hooks/useDashboard';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { MetricCard } from '@/components/dashboard/overview/cards';
 import { UsersDataTable } from '@/components/dashboard/users/tables';
@@ -12,6 +14,8 @@ import { Loader2, Users, UserPlus, UserCheck, UserX } from 'lucide-react';
 export default function UsersPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { data: growthTrend, isLoading: growthLoading } = useUserGrowthTrend(30);
+  const { data: dashboardMetrics, isLoading: metricsLoading } = useDashboardMetrics();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -45,32 +49,50 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
           title="Total Users"
-          value="12,543"
-          change={12.5}
+          value={metricsLoading ? '...' : dashboardMetrics?.totalUsers.toLocaleString() || '0'}
+          change={dashboardMetrics?.totalUsersChange || 0}
           icon={Users}
           iconColor="#3b82f6"
           index={0}
         />
         <MetricCard
           title="New This Month"
-          value="1,234"
-          change={23.1}
+          value={(() => {
+            if (growthLoading) return '...';
+            const now = new Date();
+            const month = now.getMonth();
+            const year = now.getFullYear();
+            const count = (growthTrend || [])
+              .filter((d) => {
+                const dt = new Date(d.date);
+                return dt.getMonth() === month && dt.getFullYear() === year;
+              })
+              .reduce((sum, d) => sum + (d.newUsers || 0), 0);
+            return count.toLocaleString();
+          })()}
+          change={dashboardMetrics?.totalUsersChange || 0}
           icon={UserPlus}
           iconColor="#10b981"
           index={1}
         />
         <MetricCard
           title="Active Users"
-          value="11,892"
-          change={5.4}
+          value={metricsLoading ? '...' : dashboardMetrics?.activeUsers.toLocaleString() || '0'}
+          change={0}
           icon={UserCheck}
           iconColor="#CD1B78"
           index={2}
         />
         <MetricCard
           title="Inactive Users"
-          value="651"
-          change={-8.2}
+          value={(() => {
+            if (metricsLoading) return '...';
+            const total = dashboardMetrics?.totalUsers || 0;
+            const active = dashboardMetrics?.activeUsers || 0;
+            const inactive = Math.max(total - active, 0);
+            return inactive.toLocaleString();
+          })()}
+          change={0}
           icon={UserX}
           iconColor="#f59e0b"
           index={3}
@@ -79,8 +101,8 @@ export default function UsersPage() {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-        <UserGrowthChart />
-        <UsersByRoleChart />
+        <UserGrowthChart data={growthTrend?.map((d) => ({ date: d.date, totalUsers: d.totalUsers, newUsers: d.newUsers }))} isLoading={growthLoading} />
+        <UsersByRoleChart usersByType={dashboardMetrics?.userBreakdown} />
       </div>
 
       {/* Users Table */}

@@ -84,8 +84,8 @@ export class AuthService {
    */
   static async changePasswordApi(
     data: ChangePasswordDto
-  ): Promise<UriResponse<any>> {
-    const response: Awaited<AxiosResponse<UriResponse<any>>> =
+  ): Promise<UriResponse<unknown>> {
+    const response: Awaited<AxiosResponse<UriResponse<unknown>>> =
       await AdminHttpClient.getClient().post(authRoutes.changePassword, data);
     return response.data;
   }

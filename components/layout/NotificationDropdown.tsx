@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Check, CheckCheck, Trash2, Settings, X, AlertCircle, DollarSign, Users, MessageSquare, Shield, Target } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AllNotificationsModal } from './AllNotificationsModal';
+import { Bell, CheckCheck, Trash2, Settings, X, AlertCircle, DollarSign, Users, MessageSquare, Shield, Target } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export interface Notification {
   id: string;

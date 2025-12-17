@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminLayout } from '@/components/layout/AdminLayout';
-import { Loader2, HelpCircle, BookOpen, FileText, MessageSquare, Search, ChevronRight } from 'lucide-react';
+import { Loader2, BookOpen, FileText, MessageSquare, Search, ChevronRight } from 'lucide-react';
 
 export default function HelpPage() {
   const router = useRouter();

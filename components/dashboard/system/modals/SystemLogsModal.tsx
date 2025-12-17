@@ -2,18 +2,22 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/common/Modal';
-import { Search, X, AlertCircle, Filter, Download } from 'lucide-react';
+import { Search, X, AlertCircle, Filter, Download, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useExceptionLogs } from '@/hooks/useSystem';
+import { formatDistanceToNow } from 'date-fns';
 
 interface SystemLog {
-  id: string;
-  service: string;
-  message: string;
-  method: string;
-  timestamp: string;
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  statusCode?: number;
-  endpoint?: string;
+  logId?: string;
+  userId?: string;
+  userEmail?: string;
+  exception: string;
+  method?: string;
+  url?: string;
+  status?: number;
+  serviceType?: string;
+  exceptionDate?: string | Date;
+  severity?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   stackTrace?: string;
   userAgent?: string;
   ipAddress?: string;
@@ -24,106 +28,42 @@ interface SystemLogsModalProps {
   onClose: () => void;
 }
 
-const allLogs: SystemLog[] = [
-  {
-    id: 'LOG-001',
-    service: 'URI Backend',
-    message: 'Database connection timeout',
-    method: 'POST /api/v1/users',
-    timestamp: '2024-12-08 14:23:45',
-    severity: 'critical',
-    statusCode: 500,
-    endpoint: '/api/v1/users',
-    stackTrace: 'Error: Connection timeout at Database.connect() at UserService.createUser()',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-    ipAddress: '192.168.1.100',
-  },
-  {
-    id: 'LOG-002',
-    service: 'URI Insights',
-    message: 'Rate limit exceeded',
-    method: 'GET /api/v1/leads',
-    timestamp: '2024-12-08 14:08:12',
-    severity: 'medium',
-    statusCode: 429,
-    endpoint: '/api/v1/leads',
-    stackTrace: 'Error: Too many requests from this IP',
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    ipAddress: '10.0.0.45',
-  },
-  {
-    id: 'LOG-003',
-    service: 'URI Transaction',
-    message: 'Payment gateway timeout',
-    method: 'POST /api/v1/transactions',
-    timestamp: '2024-12-08 13:45:30',
-    severity: 'high',
-    statusCode: 504,
-    endpoint: '/api/v1/transactions',
-    stackTrace: 'Error: Gateway timeout while processing payment',
-    userAgent: 'PostmanRuntime/7.32.3',
-    ipAddress: '172.16.0.12',
-  },
-  {
-    id: 'LOG-004',
-    service: 'URI Backend',
-    message: 'Invalid authentication token',
-    method: 'GET /api/v1/profile',
-    timestamp: '2024-12-08 13:30:15',
-    severity: 'low',
-    statusCode: 401,
-    endpoint: '/api/v1/profile',
-    stackTrace: 'Error: JWT token expired or invalid',
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1)',
-    ipAddress: '192.168.1.50',
-  },
-  {
-    id: 'LOG-005',
-    service: 'URI Insights',
-    message: 'Memory allocation failed',
-    method: 'POST /api/v1/analytics',
-    timestamp: '2024-12-08 13:15:00',
-    severity: 'critical',
-    statusCode: 500,
-    endpoint: '/api/v1/analytics',
-    stackTrace: 'Error: Out of memory while processing large dataset',
-    userAgent: 'Python/3.9 requests/2.28.1',
-    ipAddress: '10.0.1.200',
-  },
-  {
-    id: 'LOG-006',
-    service: 'URI Backend',
-    message: 'File upload size exceeded',
-    method: 'POST /api/v1/media',
-    timestamp: '2024-12-08 12:50:22',
-    severity: 'medium',
-    statusCode: 413,
-    endpoint: '/api/v1/media',
-    stackTrace: 'Error: Request entity too large (max 10MB)',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-    ipAddress: '192.168.2.33',
-  },
-];
-
 const severityColors = {
-  critical: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', border: '#fecaca' },
-  high: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', border: '#fef3c7' },
-  medium: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
-  low: { bg: 'rgba(156, 163, 175, 0.1)', text: '#6b7280', border: '#e5e7eb' },
+  CRITICAL: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', border: '#fecaca' },
+  HIGH: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', border: '#fef3c7' },
+  MEDIUM: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', border: '#dbeafe' },
+  LOW: { bg: 'rgba(156, 163, 175, 0.1)', text: '#6b7280', border: '#e5e7eb' },
 };
+
+function getSeverity(status?: number): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
+  if (!status) return 'MEDIUM';
+  if (status >= 500) return 'CRITICAL';
+  if (status >= 400 && status < 500) return 'HIGH';
+  if (status >= 300) return 'MEDIUM';
+  return 'LOW';
+}
 
 export function SystemLogsModal({ isOpen, onClose }: SystemLogsModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data: logsData, isLoading } = useExceptionLogs(currentPage, 50);
+
+  const allLogs: SystemLog[] = (logsData?.logs || []).map((log: any) => ({
+    ...log,
+    severity: log.severity || getSeverity(log.status),
+  }));
 
   const filteredLogs = allLogs.filter((log) => {
     const matchesSearch =
-      log.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.method.toLowerCase().includes(searchQuery.toLowerCase());
+      (log.logId?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (log.serviceType?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (log.exception?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (log.method?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (log.url?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     const matchesSeverity = severityFilter === 'all' || log.severity === severityFilter;
     return matchesSearch && matchesSeverity;
   });
@@ -219,24 +159,9 @@ export function SystemLogsModal({ isOpen, onClose }: SystemLogsModalProps) {
               )}
             </button>
 
-            <button
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 16px',
-                background: '#fff',
-                border: '1px solid #E5E5E5',
-                borderRadius: '10px',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#0d0e0f',
-                cursor: 'pointer',
-              }}
-            >
-              <Download size={16} />
-              Export
-            </button>
+            <div style={{ marginLeft: 'auto', fontSize: '13px', color: '#6C727F' }}>
+              Total: {logsData?.total || 0} logs
+            </div>
           </div>
 
           {/* Filter Panel */}
@@ -278,10 +203,10 @@ export function SystemLogsModal({ isOpen, onClose }: SystemLogsModalProps) {
                       }}
                     >
                       <option value="all">All Severities</option>
-                      <option value="critical">Critical</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
+                      <option value="CRITICAL">Critical</option>
+                      <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
                     </select>
                   </div>
 
@@ -309,70 +234,129 @@ export function SystemLogsModal({ isOpen, onClose }: SystemLogsModalProps) {
           </AnimatePresence>
 
           {/* Logs List */}
-          <div style={{ display: 'grid', gap: '10px', maxHeight: '400px', overflowY: 'auto' }} className="logs-scroll">
-            {filteredLogs.map((log, index) => (
-              <motion.div
-                key={log.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
-                onClick={() => setSelectedLog(log)}
+          {isLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredLogs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#6C727F' }}>
+              <p>No exception logs found</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '10px', maxHeight: '400px', overflowY: 'auto' }} className="logs-scroll">
+              {filteredLogs.map((log, index) => (
+                <motion.div
+                  key={log.logId || index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  onClick={() => setSelectedLog(log)}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: '1px solid #E5E7EB',
+                    backgroundColor: selectedLog?.logId === log.logId ? 'rgba(205, 27, 120, 0.05)' : '#F9FAFB',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedLog?.logId !== log.logId) {
+                      e.currentTarget.style.backgroundColor = '#F3F4F6';
+                      e.currentTarget.style.borderColor = '#D1D5DB';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedLog?.logId !== log.logId) {
+                      e.currentTarget.style.backgroundColor = '#F9FAFB';
+                      e.currentTarget.style.borderColor = '#E5E7EB';
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <AlertCircle size={14} style={{ color: severityColors[log.severity || 'MEDIUM'].text }} />
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f' }}>
+                          {log.exception?.substring(0, 100) || 'Unknown error'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '12px', color: '#6C727F', fontFamily: 'monospace' }}>
+                          {log.logId || 'N/A'}
+                        </span>
+                        <span style={{ fontSize: '12px', color: '#9EA3AE' }}>•</span>
+                        <span style={{ fontSize: '12px', color: '#6C727F' }}>{log.serviceType || 'Unknown'}</span>
+                        <span style={{ fontSize: '12px', color: '#9EA3AE' }}>•</span>
+                        <span style={{ fontSize: '12px', color: '#6C727F', fontFamily: 'monospace' }}>
+                          {log.method} {log.url}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '12px' }}>
+                      <span
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          backgroundColor: severityColors[log.severity || 'MEDIUM'].bg,
+                          color: severityColors[log.severity || 'MEDIUM'].text,
+                          borderRadius: '6px',
+                          textTransform: 'uppercase',
+                          border: `1px solid ${severityColors[log.severity || 'MEDIUM'].border}`,
+                        }}
+                      >
+                        {log.severity || 'MEDIUM'}
+                      </span>
+                      <span style={{ fontSize: '12px', color: '#9EA3AE', whiteSpace: 'nowrap' }}>
+                        {log.exceptionDate
+                          ? formatDistanceToNow(new Date(log.exceptionDate), { addSuffix: true })
+                          : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!isLoading && filteredLogs.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', paddingTop: '8px' }}>
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
                 style={{
-                  padding: '14px',
-                  borderRadius: '10px',
-                  border: '1px solid #E5E7EB',
-                  backgroundColor: selectedLog?.id === log.id ? 'rgba(205, 27, 120, 0.05)' : '#F9FAFB',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedLog?.id !== log.id) {
-                    e.currentTarget.style.backgroundColor = '#F3F4F6';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedLog?.id !== log.id) {
-                    e.currentTarget.style.backgroundColor = '#F9FAFB';
-                    e.currentTarget.style.borderColor = '#E5E7EB';
-                  }
+                  padding: '6px 12px',
+                  border: '1px solid #E5E5E5',
+                  borderRadius: '8px',
+                  background: currentPage === 1 ? '#F9FAFB' : '#fff',
+                  color: currentPage === 1 ? '#9EA3AE' : '#0d0e0f',
+                  fontSize: '13px',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                      <AlertCircle size={14} style={{ color: severityColors[log.severity].text }} />
-                      <span style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f' }}>{log.message}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '12px', color: '#6C727F', fontFamily: 'monospace' }}>{log.id}</span>
-                      <span style={{ fontSize: '12px', color: '#9EA3AE' }}>•</span>
-                      <span style={{ fontSize: '12px', color: '#6C727F' }}>{log.service}</span>
-                      <span style={{ fontSize: '12px', color: '#9EA3AE' }}>•</span>
-                      <span style={{ fontSize: '12px', color: '#6C727F', fontFamily: 'monospace' }}>{log.method}</span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '12px' }}>
-                    <span
-                      style={{
-                        padding: '3px 8px',
-                        fontSize: '10px',
-                        fontWeight: 600,
-                        backgroundColor: severityColors[log.severity].bg,
-                        color: severityColors[log.severity].text,
-                        borderRadius: '6px',
-                        textTransform: 'uppercase',
-                        border: `1px solid ${severityColors[log.severity].border}`,
-                      }}
-                    >
-                      {log.severity}
-                    </span>
-                    <span style={{ fontSize: '12px', color: '#9EA3AE', whiteSpace: 'nowrap' }}>{log.timestamp}</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                Previous
+              </button>
+              <span style={{ padding: '6px 12px', fontSize: '13px', color: '#6C727F' }}>
+                Page {currentPage} of {Math.ceil((logsData?.total || 0) / 50)}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => p + 1)}
+                disabled={currentPage >= Math.ceil((logsData?.total || 0) / 50)}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #E5E5E5',
+                  borderRadius: '8px',
+                  background: currentPage >= Math.ceil((logsData?.total || 0) / 50) ? '#F9FAFB' : '#fff',
+                  color: currentPage >= Math.ceil((logsData?.total || 0) / 50) ? '#9EA3AE' : '#0d0e0f',
+                  fontSize: '13px',
+                  cursor: currentPage >= Math.ceil((logsData?.total || 0) / 50) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Next
+              </button>
+            </div>
+          )}
 
           {/* Log Details */}
           {selectedLog && (
@@ -407,55 +391,69 @@ export function SystemLogsModal({ isOpen, onClose }: SystemLogsModalProps) {
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
                     LOG ID
                   </label>
-                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>{selectedLog.id}</p>
+                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>
+                    {selectedLog.logId || 'N/A'}
+                  </p>
                 </div>
 
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
                     TIMESTAMP
                   </label>
-                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0 }}>{selectedLog.timestamp}</p>
+                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0 }}>
+                    {selectedLog.exceptionDate ? new Date(selectedLog.exceptionDate).toLocaleString() : 'N/A'}
+                  </p>
                 </div>
 
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
                     SERVICE
                   </label>
-                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0 }}>{selectedLog.service}</p>
+                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0 }}>{selectedLog.serviceType || 'Unknown'}</p>
                 </div>
 
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
                     STATUS CODE
                   </label>
-                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>{selectedLog.statusCode}</p>
+                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>
+                    {selectedLog.status || 'N/A'}
+                  </p>
                 </div>
 
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
                     ENDPOINT
                   </label>
-                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>{selectedLog.endpoint}</p>
+                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>
+                    {selectedLog.method} {selectedLog.url}
+                  </p>
                 </div>
 
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
                     IP ADDRESS
                   </label>
-                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>{selectedLog.ipAddress}</p>
+                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, fontFamily: 'monospace' }}>
+                    {selectedLog.ipAddress || 'N/A'}
+                  </p>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
-                  USER AGENT
-                </label>
-                <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, wordBreak: 'break-all' }}>{selectedLog.userAgent}</p>
-              </div>
+              {selectedLog.userAgent && (
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
+                    USER AGENT
+                  </label>
+                  <p style={{ fontSize: '13px', color: '#0d0e0f', margin: 0, wordBreak: 'break-all' }}>
+                    {selectedLog.userAgent}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
-                  STACK TRACE
+                  EXCEPTION MESSAGE
                 </label>
                 <div
                   style={{
@@ -463,9 +461,10 @@ export function SystemLogsModal({ isOpen, onClose }: SystemLogsModalProps) {
                     backgroundColor: '#F9FAFB',
                     borderRadius: '8px',
                     border: '1px solid #E5E5E5',
+                    marginBottom: '12px',
                   }}
                 >
-                  <pre
+                  <p
                     style={{
                       fontSize: '12px',
                       color: '#ef4444',
@@ -475,10 +474,39 @@ export function SystemLogsModal({ isOpen, onClose }: SystemLogsModalProps) {
                       wordBreak: 'break-word',
                     }}
                   >
-                    {selectedLog.stackTrace}
-                  </pre>
+                    {selectedLog.exception}
+                  </p>
                 </div>
               </div>
+
+              {selectedLog.stackTrace && (
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#6C727F', display: 'block', marginBottom: '4px' }}>
+                    STACK TRACE
+                  </label>
+                  <div
+                    style={{
+                      padding: '10px',
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: '8px',
+                      border: '1px solid #E5E5E5',
+                    }}
+                  >
+                    <pre
+                      style={{
+                        fontSize: '11px',
+                        color: '#6C727F',
+                        margin: 0,
+                        fontFamily: 'monospace',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {selectedLog.stackTrace}
+                    </pre>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 

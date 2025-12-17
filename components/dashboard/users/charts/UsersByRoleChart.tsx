@@ -1,14 +1,22 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LegendPayload } from 'recharts';
 
-const userRoleData = [
-  { name: 'Creative', value: 5842, color: '#8b5cf6' },
-  { name: 'Business', value: 4234, color: '#3b82f6' },
-  { name: 'Agency', value: 2467, color: '#CD1B78' },
-];
+type UsersByType = {
+  creative: number;
+  business: number;
+  agency: number;
+  admin: number;
+};
 
-export function UsersByRoleChart() {
+export function UsersByRoleChart({ usersByType }: { usersByType?: UsersByType }) {
+  const data = [
+    { name: 'Creative', value: usersByType?.creative || 0, color: '#8b5cf6' },
+    { name: 'Business', value: usersByType?.business || 0, color: '#3b82f6' },
+    { name: 'Agency', value: usersByType?.agency || 0, color: '#CD1B78' },
+    { name: 'Admin', value: usersByType?.admin || 0, color: '#10b981' },
+  ];
+
   return (
     <div
       style={{
@@ -28,7 +36,7 @@ export function UsersByRoleChart() {
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
-            data={userRoleData}
+            data={data}
             cx="50%"
             cy="50%"
             innerRadius={60}
@@ -36,7 +44,7 @@ export function UsersByRoleChart() {
             dataKey="value"
             paddingAngle={2}
           >
-            {userRoleData.map((entry, index) => (
+            {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} stroke="#fff" strokeWidth={2} />
             ))}
           </Pie>
@@ -53,11 +61,18 @@ export function UsersByRoleChart() {
             verticalAlign="bottom"
             height={36}
             iconType="circle"
-            formatter={(value, entry: any) => (
-              <span style={{ color: '#6C727F', fontSize: '13px', fontWeight: 500 }}>
-                {value} ({entry.payload.value.toLocaleString()})
-              </span>
-            )}
+            formatter={(value: string, entry: LegendPayload) => {
+              const count = typeof entry?.value === 'number'
+                ? entry.value
+                : typeof (entry?.payload as { value?: number })?.value === 'number'
+                ? (entry.payload as { value: number }).value
+                : 0;
+              return (
+                <span style={{ color: '#6C727F', fontSize: '13px', fontWeight: 500 }}>
+                  {value} ({count.toLocaleString()})
+                </span>
+              );
+            }}
           />
         </PieChart>
       </ResponsiveContainer>

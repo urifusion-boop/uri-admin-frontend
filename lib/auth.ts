@@ -14,6 +14,13 @@ export interface AdminUser {
   userType: string;
 }
 
+export type JwtClaims = {
+  exp?: number;
+  userId?: string;
+  claims?: unknown;
+  [key: string]: unknown;
+};
+
 export class AuthHelper {
   /**
    * Save authentication tokens to localStorage
@@ -77,7 +84,7 @@ export class AuthHelper {
   /**
    * Parse JWT token to extract claims
    */
-  static parseJwt(token: string): any {
+  static parseJwt(token: string): JwtClaims | null {
     try {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -87,7 +94,7 @@ export class AuthHelper {
           .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
           .join('')
       );
-      return JSON.parse(jsonPayload);
+      return JSON.parse(jsonPayload) as JwtClaims;
     } catch (error) {
       console.error('Error parsing JWT:', error);
       return null;
@@ -98,7 +105,7 @@ export class AuthHelper {
    * Check if token is expired
    */
   static isTokenExpired(token: string): boolean {
-    const claims = this.parseJwt(token);
+    const claims = this.parseJwt(token) as { exp?: number } | null;
     if (!claims || !claims.exp) return true;
 
     const expirationTime = claims.exp * 1000; // Convert to milliseconds

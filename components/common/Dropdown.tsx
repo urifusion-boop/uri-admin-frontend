@@ -20,6 +20,7 @@ interface DropdownProps {
 export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0, right: 0 });
+  const [dropUp, setDropUp] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
 
@@ -31,33 +32,53 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
       }
     };
 
+    const handleScroll = () => {
+      if (isOpen) {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('scroll', handleScroll, true);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
+
+      // Estimate dropdown height (50px per item + padding)
+      const dropdownHeight = items.length * 50 + 16;
+
+      // Check available space below and above
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      // Decide whether to drop up or down
+      const shouldDropUp = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+      setTimeout(() => setDropUp(shouldDropUp), 0);
+
       if (align === 'right') {
         setPosition({
-          top: rect.bottom + 8,
+          top: shouldDropUp ? rect.top - dropdownHeight - 8 : rect.bottom + 8,
           left: 0,
           right: window.innerWidth - rect.right,
         });
       } else {
         setPosition({
-          top: rect.bottom + 8,
+          top: shouldDropUp ? rect.top - dropdownHeight - 8 : rect.bottom + 8,
           left: rect.left,
           right: 0,
         });
       }
     }
-  }, [isOpen, align]);
+  }, [isOpen, align, items.length]);
 
   return (
     <>
@@ -70,9 +91,9 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
           {isOpen && (
             <motion.div
               ref={dropdownRef}
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: dropUp ? 10 : -10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: dropUp ? 10 : -10 }}
               transition={{ duration: 0.15 }}
               style={{
                 position: 'fixed',

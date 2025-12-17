@@ -7,11 +7,14 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { MetricCard } from '@/components/dashboard/overview/cards';
 import { ServiceStatusCard } from '@/components/dashboard/system/cards';
 import { ExceptionLogsTable } from '@/components/dashboard/system/tables';
-import { Loader2, Server, Cpu, Database, Activity } from 'lucide-react';
+import { useSystemHealth, useExceptionLogs } from '@/hooks/useSystem';
+import { Loader2, Server, AlertCircle, Database, Activity } from 'lucide-react';
 
 export default function SystemPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { data: healthData, isLoading: healthLoading } = useSystemHealth();
+  const { data: exceptionsData, isLoading: exceptionsLoading } = useExceptionLogs(1, 100);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -31,6 +34,15 @@ export default function SystemPage() {
     return null;
   }
 
+  // Calculate metrics from real data
+  const healthScore = healthData?.healthScore ?? 0;
+  const exceptionsLastHour = healthData?.exceptionsLastHour ?? 0;
+  const totalExceptions = exceptionsData?.total ?? 0;
+
+  // Determine status color
+  const statusColor = healthScore >= 95 ? '#10b981' : healthScore >= 85 ? '#f59e0b' : '#ef4444';
+  const statusText = healthScore >= 95 ? 'Healthy' : healthScore >= 85 ? 'Warning' : 'Critical';
+
   return (
     <AdminLayout>
       <div className="mb-8">
@@ -42,31 +54,31 @@ export default function SystemPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
-          title="Server Status"
-          value="Healthy"
+          title="System Health"
+          value={healthLoading ? '...' : statusText}
           icon={Server}
-          iconColor="#10b981"
+          iconColor={statusColor}
           index={0}
         />
         <MetricCard
-          title="CPU Usage"
-          value="42%"
-          icon={Cpu}
-          iconColor="#3b82f6"
+          title="Health Score"
+          value={healthLoading ? '...' : `${healthScore}%`}
+          icon={Activity}
+          iconColor={statusColor}
           index={1}
         />
         <MetricCard
-          title="Memory Usage"
-          value="68%"
-          icon={Database}
-          iconColor="#CD1B78"
+          title="Exceptions/Hour"
+          value={healthLoading ? '...' : exceptionsLastHour.toString()}
+          icon={AlertCircle}
+          iconColor={exceptionsLastHour > 10 ? '#ef4444' : exceptionsLastHour > 5 ? '#f59e0b' : '#10b981'}
           index={2}
         />
         <MetricCard
-          title="Uptime"
-          value="99.9%"
-          icon={Activity}
-          iconColor="#10b981"
+          title="Total Exceptions"
+          value={exceptionsLoading ? '...' : totalExceptions.toLocaleString()}
+          icon={Database}
+          iconColor="#CD1B78"
           index={3}
         />
       </div>

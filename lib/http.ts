@@ -57,8 +57,18 @@ class AdminHttpClient {
 
   private static getStoredTokens() {
     if (typeof window === 'undefined') return null;
-    const tokens = localStorage.getItem(STORE_KEYS.USER_TOKENS);
-    return tokens ? JSON.parse(tokens) : null;
+    const tokensString = localStorage.getItem(STORE_KEYS.USER_TOKENS);
+    if (!tokensString) return null;
+
+    try {
+      const tokens = JSON.parse(tokensString);
+      // Return null if tokens object is empty or missing accessToken
+      if (!tokens || !tokens.accessToken) return null;
+      return tokens;
+    } catch (error) {
+      console.error('Error parsing stored tokens:', error);
+      return null;
+    }
   }
 
   private static async handleErrorResponse(error: AxiosError) {

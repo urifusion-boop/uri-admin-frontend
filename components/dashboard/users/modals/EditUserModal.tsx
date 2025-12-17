@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/common/Modal';
-import { User, Mail, Phone, Shield, Calendar } from 'lucide-react';
+import { User, Mail, Phone, Shield, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUpdateUser } from '@/hooks/useUsers';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -14,8 +15,9 @@ interface EditUserModalProps {
     email: string;
     phone: string;
     role: string;
-    status: 'Active' | 'Suspended' | 'Pending';
+    status: 'ACTIVE' | 'INACTIVE' | 'DEACTIVATED' | 'RESTRICTED' | 'LOCKED' | 'DELETED';
     joinDate: string;
+    subscription?: string;
   };
 }
 
@@ -28,10 +30,32 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
     status: user.status,
   });
 
-  const handleSave = () => {
-    // TODO: Implement API call to update user
-    toast.success(`User "${formData.name}" updated successfully!`);
-    onClose();
+  const updateUserMutation = useUpdateUser();
+
+  const handleSave = async () => {
+    try {
+      // Parse first and last name from full name
+      const names = formData.name.trim().split(' ');
+      const firstName = names[0] || '';
+      const lastName = names.slice(1).join(' ') || '';
+
+      await updateUserMutation.mutateAsync({
+        userId: user.id,
+        data: {
+          firstName,
+          lastName,
+          email: formData.email,
+          phoneNumber: formData.phone,
+          userType: formData.role as any,
+          userStatus: formData.status,
+        },
+      });
+
+      toast.success(`User "${formData.name}" updated successfully!`);
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update user');
+    }
   };
 
   return (
@@ -249,9 +273,8 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
                   e.currentTarget.style.borderColor = '#E5E5E5';
                 }}
               >
-                <option value="Influencer">Influencer</option>
-                <option value="Business">Business</option>
-                <option value="Admin">Admin</option>
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
               </select>
             </div>
           </div>
@@ -282,7 +305,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
               />
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Active' | 'Suspended' | 'Pending' })}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE' | 'DEACTIVATED' | 'RESTRICTED' | 'LOCKED' | 'DELETED' })}
                 style={{
                   width: '100%',
                   padding: '10px 10px 10px 36px',
@@ -302,9 +325,12 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
                   e.currentTarget.style.borderColor = '#E5E5E5';
                 }}
               >
-                <option value="Active">Active</option>
-                <option value="Suspended">Suspended</option>
-                <option value="Pending">Pending</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="DEACTIVATED">Deactivated</option>
+                <option value="RESTRICTED">Restricted</option>
+                <option value="LOCKED">Locked</option>
+                <option value="DELETED">Deleted</option>
               </select>
             </div>
           </div>
@@ -337,26 +363,36 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
           </button>
           <button
             onClick={handleSave}
+            disabled={updateUserMutation.isPending}
             style={{
               flex: 1,
               padding: '11px',
               borderRadius: '10px',
               border: 'none',
-              backgroundColor: '#CD1B78',
+              backgroundColor: updateUserMutation.isPending ? '#999' : '#CD1B78',
               color: '#fff',
               fontSize: '14px',
               fontWeight: 500,
-              cursor: 'pointer',
+              cursor: updateUserMutation.isPending ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#a01560';
+              if (!updateUserMutation.isPending) {
+                e.currentTarget.style.backgroundColor = '#a01560';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#CD1B78';
+              if (!updateUserMutation.isPending) {
+                e.currentTarget.style.backgroundColor = '#CD1B78';
+              }
             }}
           >
-            Save Changes
+            {updateUserMutation.isPending && <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />}
+            {updateUserMutation.isPending ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
