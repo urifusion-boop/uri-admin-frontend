@@ -15,6 +15,8 @@ interface Lead {
   status: string;
   createdDate: string;
   email?: string;
+  userEmail?: string;
+  userName?: string;
 }
 
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -47,6 +49,8 @@ export function RecentLeadsTable() {
     intentScore: lead.intent_score || 0,
     relevanceScore: lead.relevance_score || 0,
     createdDate: lead.created_date,
+    userEmail: lead.user_email,
+    userName: lead.user_name,
   }));
 
   const filteredLeads = leads.filter((lead) => {
@@ -171,6 +175,9 @@ export function RecentLeadsTable() {
                   Lead Name
                 </th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
+                  User
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
                   Platform
                 </th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#6C727F' }}>
@@ -198,7 +205,15 @@ export function RecentLeadsTable() {
                 <td style={{ padding: '16px' }}>
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: 600, color: '#0d0e0f', marginBottom: '2px' }}>{lead.name}</p>
-                    <p style={{ fontSize: '12px', color: '#9EA3AE', margin: 0 }}>{lead.email}</p>
+                    <p style={{ fontSize: '12px', color: '#9EA3AE', margin: 0 }}>{lead.email || 'No email'}</p>
+                  </div>
+                </td>
+                <td style={{ padding: '16px' }}>
+                  <div>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#0d0e0f', marginBottom: '2px' }}>
+                      {lead.userName || 'Unknown User'}
+                    </p>
+                    <p style={{ fontSize: '12px', color: '#9EA3AE', margin: 0 }}>{lead.userEmail || ''}</p>
                   </div>
                 </td>
                 <td style={{ padding: '16px' }}>
