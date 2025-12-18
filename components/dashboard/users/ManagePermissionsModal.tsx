@@ -164,8 +164,9 @@ const PERMISSION_TEMPLATES = [
 ];
 
 function formatPermissionLabel(permission: string): string {
-  return permission
-    .split(':')[1]
+  const parts = permission.split(':');
+  const label = parts.length > 1 ? parts[1] : permission;
+  return label
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');

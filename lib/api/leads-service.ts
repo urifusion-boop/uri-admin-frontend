@@ -132,6 +132,18 @@ export interface PlatformPerformanceDto {
  * Admin Leads Service
  * Professional admin analytics endpoints for lead management
  */
+// Date filter mapping - enum name to enum value
+const DATE_FILTER_VALUES: Record<string, string> = {
+  'LAST_24_HOURS': '24hr',
+  'LAST_3_DAYS': '3_days',
+  'LAST_7_DAYS': '7_days',
+  'LAST_1_WEEK': '1_week',
+  'LAST_2_WEEKS': '2_weeks',
+  'LAST_1_MONTH': '1_month',
+  'LAST_2_MONTHS': '2_months',
+  'LAST_3_MONTHS': '3_months',
+};
+
 export class LeadsService {
   /**
    * Get comprehensive lead overview across all users
@@ -140,9 +152,10 @@ export class LeadsService {
   static async getLeadOverview(
     dateFilter: string = 'LAST_1_MONTH'
   ): Promise<UriResponse<AdminLeadOverviewDto>> {
+    const filterValue = DATE_FILTER_VALUES[dateFilter] || '1_month';
     const response: Awaited<AxiosResponse<UriResponse<AdminLeadOverviewDto>>> =
       await AdminHttpClient.getClient().get(
-        `${BackendUrlEnum.INSIGHTS}/admin/leads/overview?date_filter=${dateFilter}`
+        `${BackendUrlEnum.INSIGHTS}/admin/leads/overview?date_filter=${filterValue}`
       );
     return response.data;
   }
@@ -155,9 +168,10 @@ export class LeadsService {
     userId: string,
     dateFilter: string = 'LAST_1_MONTH'
   ): Promise<UriResponse<UserLeadAnalyticsDto>> {
+    const filterValue = DATE_FILTER_VALUES[dateFilter] || '1_month';
     const response: Awaited<AxiosResponse<UriResponse<UserLeadAnalyticsDto>>> =
       await AdminHttpClient.getClient().get(
-        `${BackendUrlEnum.INSIGHTS}/admin/leads/by-user/${userId}?date_filter=${dateFilter}`
+        `${BackendUrlEnum.INSIGHTS}/admin/leads/by-user/${userId}?date_filter=${filterValue}`
       );
     return response.data;
   }
@@ -191,9 +205,10 @@ export class LeadsService {
     dateFilter: string = 'LAST_1_MONTH',
     limit: number = 10
   ): Promise<UriResponse<{ users: TopUserDto[]; count: number }>> {
+    const filterValue = DATE_FILTER_VALUES[dateFilter] || '1_month';
     const response: Awaited<AxiosResponse<UriResponse<{ users: TopUserDto[]; count: number }>>> =
       await AdminHttpClient.getClient().get(
-        `${BackendUrlEnum.INSIGHTS}/admin/leads/top-users?date_filter=${dateFilter}&limit=${limit}`
+        `${BackendUrlEnum.INSIGHTS}/admin/leads/top-users?date_filter=${filterValue}&limit=${limit}`
       );
     return response.data;
   }
@@ -220,7 +235,8 @@ export class LeadsService {
     dateFilter: string = 'LAST_1_MONTH',
     userId?: string
   ): Promise<UriResponse<ConversionFunnelDto>> {
-    let url = `${BackendUrlEnum.INSIGHTS}/admin/leads/conversion-funnel?date_filter=${dateFilter}`;
+    const filterValue = DATE_FILTER_VALUES[dateFilter] || '1_month';
+    let url = `${BackendUrlEnum.INSIGHTS}/admin/leads/conversion-funnel?date_filter=${filterValue}`;
     if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
 
     const response: Awaited<AxiosResponse<UriResponse<ConversionFunnelDto>>> =
@@ -235,10 +251,11 @@ export class LeadsService {
   static async getPlatformPerformance(
     dateFilter: string = 'LAST_1_MONTH'
   ): Promise<UriResponse<{ platforms: PlatformPerformanceDto[]; date_range: any }>> {
+    const filterValue = DATE_FILTER_VALUES[dateFilter] || '1_month';
     const response: Awaited<
       AxiosResponse<UriResponse<{ platforms: PlatformPerformanceDto[]; date_range: any }>>
     > = await AdminHttpClient.getClient().get(
-      `${BackendUrlEnum.INSIGHTS}/admin/leads/platform-performance?date_filter=${dateFilter}`
+      `${BackendUrlEnum.INSIGHTS}/admin/leads/platform-performance?date_filter=${filterValue}`
     );
     return response.data;
   }
