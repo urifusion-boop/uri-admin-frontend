@@ -10,7 +10,7 @@ export interface AdminUser {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMIN' | 'SUPER_ADMIN';
+  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
   userType: string;
 }
 

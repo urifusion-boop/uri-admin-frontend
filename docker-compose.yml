@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  uri-admin-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: uriteam/uri-admin-frontend:latest
+    container_name: uri-admin-frontend
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    restart: always
+    ports:
+      - "3001:3000"
+    networks:
+      - uritest-network
+
+networks:
+  uritest-network:
+    external: true

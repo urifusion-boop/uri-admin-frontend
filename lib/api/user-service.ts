@@ -13,7 +13,7 @@ export interface UserDto {
   lastName: string;
   phoneNumber?: string;
   country?: string;
-  role: 'USER' | 'ADMIN';
+  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
   userType: 'USER' | 'ADMIN';
   userStatus: 'ACTIVE' | 'INACTIVE' | 'DEACTIVATED' | 'RESTRICTED' | 'LOCKED' | 'DELETED';
   subscriptionStatus?: 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
