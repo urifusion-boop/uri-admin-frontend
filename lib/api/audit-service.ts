@@ -1,6 +1,7 @@
 import { AxiosResponse } from 'axios';
 import { AdminHttpClient } from '../http';
 import { UriResponse } from './auth-service';
+import { BackendUrlEnum } from '../constants/backend-urls';
 
 /**
  * Audit Log DTO
@@ -145,7 +146,7 @@ export class AuditService {
    */
   static async getAuditAnalytics(): Promise<UriResponse<AuditAnalyticsDto>> {
     const response: Awaited<AxiosResponse<UriResponse<AuditAnalyticsDto>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/audit/analytics');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/audit/analytics`);
     return response.data;
   }
 
@@ -156,7 +157,7 @@ export class AuditService {
   static async getAuditEventTrend(days: number = 30): Promise<UriResponse<AuditEventTrendDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<AuditEventTrendDto[]>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/audit/event-trend?days=${days}`
+        `${BackendUrlEnum.BACKEND}/admin/audit/event-trend?days=${days}`
       );
     return response.data;
   }
@@ -185,7 +186,7 @@ export class AuditService {
 
     const response: Awaited<AxiosResponse<UriResponse<PaginatedAuditLogDto>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/audit/logs?${params.toString()}`
+        `${BackendUrlEnum.BACKEND}/admin/audit/logs?${params.toString()}`
       );
     return response.data;
   }
@@ -197,7 +198,7 @@ export class AuditService {
   static async getAuditLogById(auditLogId: string): Promise<UriResponse<AuditLogDto>> {
     const response: Awaited<AxiosResponse<UriResponse<AuditLogDto>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/audit/logs/${auditLogId}`
+        `${BackendUrlEnum.BACKEND}/admin/audit/logs/${auditLogId}`
       );
     return response.data;
   }
@@ -209,7 +210,7 @@ export class AuditService {
   static async deleteOldAuditLogs(days: number): Promise<UriResponse<{ deletedCount: number }>> {
     const response: Awaited<AxiosResponse<UriResponse<{ deletedCount: number }>>> =
       await AdminHttpClient.getClient().delete(
-        `/api/v1/admin/audit/logs/cleanup/${days}`
+        `${BackendUrlEnum.BACKEND}/admin/audit/logs/cleanup/${days}`
       );
     return response.data;
   }

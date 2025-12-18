@@ -1,6 +1,7 @@
 import { AxiosResponse } from 'axios';
 import { AdminHttpClient } from '../http';
 import { UriResponse } from './auth-service';
+import { BackendUrlEnum } from '../constants/backend-urls';
 
 /**
  * Finance Overview DTO
@@ -168,7 +169,7 @@ export class FinanceService {
    */
   static async getFinanceOverview(): Promise<UriResponse<FinanceOverviewDto>> {
     const response: Awaited<AxiosResponse<UriResponse<FinanceOverviewDto>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/finance/overview');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/finance/overview`);
     return response.data;
   }
 
@@ -179,7 +180,7 @@ export class FinanceService {
   static async getRevenueTrend(days: number = 30): Promise<UriResponse<RevenueTrendDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<RevenueTrendDto[]>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/finance/revenue-trend?days=${days}`
+        `${BackendUrlEnum.BACKEND}/admin/finance/revenue-trend?days=${days}`
       );
     return response.data;
   }
@@ -190,7 +191,7 @@ export class FinanceService {
    */
   static async getTransactionVolume(): Promise<UriResponse<TransactionVolumeDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<TransactionVolumeDto[]>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/finance/transaction-volume');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/finance/transaction-volume`);
     return response.data;
   }
 
@@ -201,7 +202,7 @@ export class FinanceService {
   static async getTopRevenuePlans(limit: number = 5): Promise<UriResponse<TopRevenuePlanDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<TopRevenuePlanDto[]>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/finance/top-revenue-plans?limit=${limit}`
+        `${BackendUrlEnum.BACKEND}/admin/finance/top-revenue-plans?limit=${limit}`
       );
     return response.data;
   }
@@ -215,7 +216,7 @@ export class FinanceService {
   ): Promise<UriResponse<PaginatedTransactionListDto>> {
     const response: Awaited<AxiosResponse<UriResponse<PaginatedTransactionListDto>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/finance/recent-transactions?limit=${limit}`
+        `${BackendUrlEnum.BACKEND}/admin/finance/recent-transactions?limit=${limit}`
       );
     return response.data;
   }
@@ -226,7 +227,7 @@ export class FinanceService {
    */
   static async getFailedPayments(): Promise<UriResponse<FailedPaymentDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<FailedPaymentDto[]>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/finance/failed-payments');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/finance/failed-payments`);
     return response.data;
   }
 
@@ -239,7 +240,7 @@ export class FinanceService {
   ): Promise<UriResponse<SubscriptionExpiringSoonDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<SubscriptionExpiringSoonDto[]>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/finance/subscriptions-expiring-soon?days=${days}`
+        `${BackendUrlEnum.BACKEND}/admin/finance/subscriptions-expiring-soon?days=${days}`
       );
     return response.data;
   }
@@ -250,7 +251,7 @@ export class FinanceService {
    */
   static async getTrialConversionFunnel(): Promise<UriResponse<TrialConversionFunnelDto>> {
     const response: Awaited<AxiosResponse<UriResponse<TrialConversionFunnelDto>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/finance/trial-conversion-funnel');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/finance/trial-conversion-funnel`);
     return response.data;
   }
 }

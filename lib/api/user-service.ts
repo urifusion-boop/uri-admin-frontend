@@ -2,6 +2,7 @@ import { AxiosResponse } from 'axios';
 import { AdminHttpClient } from '../http';
 import { userRoutes } from '../constants/user-routes';
 import { UriResponse } from './auth-service';
+import { BackendUrlEnum } from '../constants/backend-urls';
 
 /**
  * User DTO matching uri-backend User entity
@@ -179,7 +180,7 @@ export class UserService {
    */
   static async getUserAnalytics(): Promise<UriResponse<UserAnalyticsDto>> {
     const response: Awaited<AxiosResponse<UriResponse<UserAnalyticsDto>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/users/analytics');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/users/analytics`);
     return response.data;
   }
 
@@ -190,7 +191,7 @@ export class UserService {
   static async getUserGrowthTrend(days: number = 30): Promise<UriResponse<UserGrowthTrendDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<UserGrowthTrendDto[]>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/users/growth-trend?days=${days}`
+        `${BackendUrlEnum.BACKEND}/admin/users/growth-trend?days=${days}`
       );
     return response.data;
   }
@@ -202,7 +203,7 @@ export class UserService {
   static async getUserActivity(userId: string): Promise<UriResponse<UserActivityDto>> {
     const response: Awaited<AxiosResponse<UriResponse<UserActivityDto>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/users/${userId}/activity`
+        `${BackendUrlEnum.BACKEND}/admin/users/${userId}/activity`
       );
     return response.data;
   }
@@ -230,7 +231,7 @@ export class UserService {
 
     const response: Awaited<AxiosResponse<UriResponse<PaginatedUserListDto>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/users/list?${params.toString()}`
+        `${BackendUrlEnum.BACKEND}/admin/users/list?${params.toString()}`
       );
     return response.data;
   }
@@ -242,7 +243,7 @@ export class UserService {
   static async updateUser(userId: string, data: Partial<UserDto>): Promise<UriResponse<UserDto>> {
     const response: Awaited<AxiosResponse<UriResponse<UserDto>>> =
       await AdminHttpClient.getClient().put(
-        `/api/v1/admin/users/${userId}`,
+        `${BackendUrlEnum.BACKEND}/admin/users/${userId}`,
         data
       );
     return response.data;
@@ -255,7 +256,7 @@ export class UserService {
   static async deleteUser(userId: string, reason?: string): Promise<UriResponse<void>> {
     const response: Awaited<AxiosResponse<UriResponse<void>>> =
       await AdminHttpClient.getClient().delete(
-        `/api/v1/admin/users/${userId}`,
+        `${BackendUrlEnum.BACKEND}/admin/users/${userId}`,
         { data: { reason } }
       );
     return response.data;
@@ -268,7 +269,7 @@ export class UserService {
   static async suspendUser(userId: string, reason?: string): Promise<UriResponse<void>> {
     const response: Awaited<AxiosResponse<UriResponse<void>>> =
       await AdminHttpClient.getClient().post(
-        `/api/v1/admin/users/${userId}/suspend`,
+        `${BackendUrlEnum.BACKEND}/admin/users/${userId}/suspend`,
         { reason }
       );
     return response.data;
@@ -281,7 +282,7 @@ export class UserService {
   static async activateUser(userId: string): Promise<UriResponse<void>> {
     const response: Awaited<AxiosResponse<UriResponse<void>>> =
       await AdminHttpClient.getClient().post(
-        `/api/v1/admin/users/${userId}/activate`
+        `${BackendUrlEnum.BACKEND}/admin/users/${userId}/activate`
       );
     return response.data;
   }
@@ -293,7 +294,7 @@ export class UserService {
   static async deactivateUser(userId: string, reason?: string): Promise<UriResponse<void>> {
     const response: Awaited<AxiosResponse<UriResponse<void>>> =
       await AdminHttpClient.getClient().post(
-        `/api/v1/admin/users/${userId}/deactivate`,
+        `${BackendUrlEnum.BACKEND}/admin/users/${userId}/deactivate`,
         { reason }
       );
     return response.data;
@@ -306,7 +307,7 @@ export class UserService {
   static async sendEmail(userId: string, subject: string, message: string): Promise<UriResponse<void>> {
     const response: Awaited<AxiosResponse<UriResponse<void>>> =
       await AdminHttpClient.getClient().post(
-        `/api/v1/admin/users/${userId}/send-email`,
+        `${BackendUrlEnum.BACKEND}/admin/users/${userId}/send-email`,
         { subject, message }
       );
     return response.data;
@@ -319,14 +320,14 @@ export class UserService {
   static async resetPassword(userId: string): Promise<UriResponse<void>> {
     const response: Awaited<AxiosResponse<UriResponse<void>>> =
       await AdminHttpClient.getClient().post(
-        `/api/v1/admin/users/${userId}/reset-password`
+        `${BackendUrlEnum.BACKEND}/admin/users/${userId}/reset-password`
       );
     return response.data;
   }
 
   static async createUser(data: CreateUserPayload): Promise<UriResponse<UserDto>> {
     const response: Awaited<AxiosResponse<UriResponse<UserDto>>> =
-      await AdminHttpClient.getClient().post(`/api/v1/auth/signup`, data);
+      await AdminHttpClient.getClient().post(`${BackendUrlEnum.BACKEND}/auth/signup`, data);
     return response.data;
   }
 }

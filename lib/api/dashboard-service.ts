@@ -1,6 +1,7 @@
 import { AxiosResponse } from 'axios';
 import { AdminHttpClient } from '../http';
 import { UriResponse } from './auth-service';
+import { BackendUrlEnum } from '../constants/backend-urls';
 
 /**
  * Dashboard Metrics DTO
@@ -78,7 +79,7 @@ export class DashboardService {
    */
   static async getOverviewMetrics(): Promise<UriResponse<DashboardMetricsDto>> {
     const response: Awaited<AxiosResponse<UriResponse<DashboardMetricsDto>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/dashboard/metrics');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/dashboard/metrics`);
     return response.data;
   }
 
@@ -89,7 +90,7 @@ export class DashboardService {
   static async getUserGrowthTrend(days: number = 30): Promise<UriResponse<ChartDataDto>> {
     const response: Awaited<AxiosResponse<UriResponse<ChartDataDto>>> =
       await AdminHttpClient.getClient().get(
-        `/api/v1/admin/dashboard/user-growth?days=${days}`
+        `${BackendUrlEnum.BACKEND}/admin/dashboard/user-growth?days=${days}`
       );
     return response.data;
   }
@@ -100,7 +101,7 @@ export class DashboardService {
    */
   static async getDashboardAlerts(): Promise<UriResponse<AlertDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<AlertDto[]>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/dashboard/alerts');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/dashboard/alerts`);
     return response.data;
   }
 
@@ -110,7 +111,7 @@ export class DashboardService {
    */
   static async getSystemHealth(): Promise<UriResponse<unknown>> {
     const response: Awaited<AxiosResponse<UriResponse<unknown>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/dashboard/system-health');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/dashboard/system-health`);
     return response.data;
   }
 }

@@ -1,6 +1,7 @@
 import { AxiosResponse } from 'axios';
 import { AdminHttpClient } from '../http';
 import { UriResponse } from './auth-service';
+import { BackendUrlEnum } from '../constants/backend-urls';
 
 export interface ExceptionLogDto {
   logId: string;
@@ -54,7 +55,7 @@ export class SystemService {
     serviceType?: string,
     userId?: string
   ): Promise<UriResponse<ExceptionLogsResponse>> {
-    let url = `/api/v1/admin/system/exception-logs?pageNumber=${pageNumber}&pageSize=${pageSize}`;
+    let url = `${BackendUrlEnum.BACKEND}/admin/system/exception-logs?pageNumber=${pageNumber}&pageSize=${pageSize}`;
     if (serviceType) {
       url += `&serviceType=${encodeURIComponent(serviceType)}`;
     }
@@ -68,19 +69,19 @@ export class SystemService {
 
   static async getRecentActivity(limit: number = 20): Promise<UriResponse<RecentActivityDto[]>> {
     const response: Awaited<AxiosResponse<UriResponse<RecentActivityDto[]>>> =
-      await AdminHttpClient.getClient().get(`/api/v1/admin/system/recent-activity?limit=${limit}`);
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/system/recent-activity?limit=${limit}`);
     return response.data;
   }
 
   static async getSystemHealth(): Promise<UriResponse<SystemHealthDto>> {
     const response: Awaited<AxiosResponse<UriResponse<SystemHealthDto>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/system/health');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/system/health`);
     return response.data;
   }
 
   static async getServicesMetrics(): Promise<UriResponse<any[]>> {
     const response: Awaited<AxiosResponse<UriResponse<any[]>>> =
-      await AdminHttpClient.getClient().get('/api/v1/admin/system/services-metrics');
+      await AdminHttpClient.getClient().get(`${BackendUrlEnum.BACKEND}/admin/system/services-metrics`);
     return response.data;
   }
 }
