@@ -13,7 +13,7 @@ import { useLeadOverview } from '@/hooks/useLeads';
 export default function LeadsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const { data: overview, isLoading: analyticsLoading } = useLeadOverview('LAST_30_DAYS');
+  const { data: overview, isLoading: analyticsLoading } = useLeadOverview('LAST_1_MONTH');
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

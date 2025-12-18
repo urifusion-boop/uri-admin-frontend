@@ -16,7 +16,7 @@ import {
  * Hook for admin lead overview analytics
  * Gets aggregated data across all users
  */
-export function useLeadOverview(dateFilter: string = 'LAST_30_DAYS') {
+export function useLeadOverview(dateFilter: string = 'LAST_1_MONTH') {
   return useQuery<AdminLeadOverviewDto | undefined>({
     queryKey: ['leads', 'overview', dateFilter],
     queryFn: async () => {
@@ -34,7 +34,7 @@ export function useLeadOverview(dateFilter: string = 'LAST_30_DAYS') {
 /**
  * Hook for user-specific lead analytics
  */
-export function useUserLeadAnalytics(userId?: string, dateFilter: string = 'LAST_30_DAYS') {
+export function useUserLeadAnalytics(userId?: string, dateFilter: string = 'LAST_1_MONTH') {
   return useQuery<UserLeadAnalyticsDto | undefined>({
     queryKey: ['leads', 'user-analytics', userId, dateFilter],
     enabled: !!userId,
@@ -78,7 +78,7 @@ export function useRecentLeads(
 /**
  * Hook for top users by lead generation
  */
-export function useTopUsers(dateFilter: string = 'LAST_30_DAYS', limit: number = 10) {
+export function useTopUsers(dateFilter: string = 'LAST_1_MONTH', limit: number = 10) {
   return useQuery<TopUserDto[] | undefined>({
     queryKey: ['leads', 'top-users', dateFilter, limit],
     queryFn: async () => {
@@ -114,7 +114,7 @@ export function useLeadTrends(days: number = 30) {
 /**
  * Hook for conversion funnel analytics
  */
-export function useConversionFunnel(dateFilter: string = 'LAST_30_DAYS', userId?: string) {
+export function useConversionFunnel(dateFilter: string = 'LAST_1_MONTH', userId?: string) {
   return useQuery<ConversionFunnelDto | undefined>({
     queryKey: ['leads', 'conversion-funnel', dateFilter, userId],
     queryFn: async () => {
@@ -132,7 +132,7 @@ export function useConversionFunnel(dateFilter: string = 'LAST_30_DAYS', userId?
 /**
  * Hook for platform performance metrics
  */
-export function usePlatformPerformance(dateFilter: string = 'LAST_30_DAYS') {
+export function usePlatformPerformance(dateFilter: string = 'LAST_1_MONTH') {
   return useQuery<PlatformPerformanceDto[] | undefined>({
     queryKey: ['leads', 'platform-performance', dateFilter],
     queryFn: async () => {

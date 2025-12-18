@@ -138,7 +138,7 @@ export class LeadsService {
    * GET /admin/leads/overview
    */
   static async getLeadOverview(
-    dateFilter: string = 'LAST_30_DAYS'
+    dateFilter: string = 'LAST_1_MONTH'
   ): Promise<UriResponse<AdminLeadOverviewDto>> {
     const response: Awaited<AxiosResponse<UriResponse<AdminLeadOverviewDto>>> =
       await AdminHttpClient.getClient().get(
@@ -153,7 +153,7 @@ export class LeadsService {
    */
   static async getUserLeadAnalytics(
     userId: string,
-    dateFilter: string = 'LAST_30_DAYS'
+    dateFilter: string = 'LAST_1_MONTH'
   ): Promise<UriResponse<UserLeadAnalyticsDto>> {
     const response: Awaited<AxiosResponse<UriResponse<UserLeadAnalyticsDto>>> =
       await AdminHttpClient.getClient().get(
@@ -188,7 +188,7 @@ export class LeadsService {
    * GET /admin/leads/top-users
    */
   static async getTopUsers(
-    dateFilter: string = 'LAST_30_DAYS',
+    dateFilter: string = 'LAST_1_MONTH',
     limit: number = 10
   ): Promise<UriResponse<{ users: TopUserDto[]; count: number }>> {
     const response: Awaited<AxiosResponse<UriResponse<{ users: TopUserDto[]; count: number }>>> =
@@ -217,7 +217,7 @@ export class LeadsService {
    * GET /admin/leads/conversion-funnel
    */
   static async getConversionFunnel(
-    dateFilter: string = 'LAST_30_DAYS',
+    dateFilter: string = 'LAST_1_MONTH',
     userId?: string
   ): Promise<UriResponse<ConversionFunnelDto>> {
     let url = `${BackendUrlEnum.INSIGHTS}/admin/leads/conversion-funnel?date_filter=${dateFilter}`;
@@ -233,7 +233,7 @@ export class LeadsService {
    * GET /admin/leads/platform-performance
    */
   static async getPlatformPerformance(
-    dateFilter: string = 'LAST_30_DAYS'
+    dateFilter: string = 'LAST_1_MONTH'
   ): Promise<UriResponse<{ platforms: PlatformPerformanceDto[]; date_range: any }>> {
     const response: Awaited<
       AxiosResponse<UriResponse<{ platforms: PlatformPerformanceDto[]; date_range: any }>>

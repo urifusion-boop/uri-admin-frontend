@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/common/Modal';
-import { User, Mail, Phone, Shield, Calendar, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Shield, Calendar, Loader2, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUpdateUser } from '@/hooks/useUsers';
+import ManagePermissionsModal from '../ManagePermissionsModal';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
     role: user.role,
     status: user.status,
   });
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
   const updateUserMutation = useUpdateUser();
 
@@ -275,6 +277,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
               >
                 <option value="USER">User</option>
                 <option value="ADMIN">Admin</option>
+                <option value="SUPER_ADMIN">Super Admin</option>
               </select>
             </div>
           </div>
@@ -336,6 +339,48 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
           </div>
         </div>
 
+        {/* Manage Permissions Button */}
+        {(formData.role === 'ADMIN' || formData.role === 'SUPER_ADMIN') && (
+          <div
+            style={{
+              padding: '12px',
+              borderRadius: '10px',
+              border: '1px solid #E5E5E5',
+              backgroundColor: '#f9fafb',
+              marginTop: '4px',
+            }}
+          >
+            <button
+              onClick={() => setShowPermissionsModal(true)}
+              style={{
+                width: '100%',
+                padding: '11px',
+                borderRadius: '10px',
+                border: '1px solid #9333ea',
+                backgroundColor: '#faf5ff',
+                color: '#9333ea',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f3e8ff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#faf5ff';
+              }}
+            >
+              <Key size={16} />
+              Manage Permissions
+            </button>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
           <button
@@ -396,6 +441,14 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
           </button>
         </div>
       </div>
+
+      {/* Permissions Modal */}
+      <ManagePermissionsModal
+        isOpen={showPermissionsModal}
+        onClose={() => setShowPermissionsModal(false)}
+        userId={user.id}
+        userName={user.name}
+      />
     </Modal>
   );
 }
