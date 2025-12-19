@@ -153,10 +153,19 @@ export class LeadsService {
     dateFilter: string = 'LAST_1_MONTH'
   ): Promise<UriResponse<AdminLeadOverviewDto>> {
     const filterValue = DATE_FILTER_VALUES[dateFilter] || '1_month';
+    console.log('[LeadsService] getLeadOverview - Request:', {
+      dateFilter,
+      filterValue,
+      url: `${BackendUrlEnum.INSIGHTS}/admin/leads/overview?date_filter=${filterValue}`
+    });
     const response: Awaited<AxiosResponse<UriResponse<AdminLeadOverviewDto>>> =
       await AdminHttpClient.getClient().get(
         `${BackendUrlEnum.INSIGHTS}/admin/leads/overview?date_filter=${filterValue}`
       );
+    console.log('[LeadsService] getLeadOverview - Response:', {
+      status: response.status,
+      data: response.data
+    });
     return response.data;
   }
 
@@ -192,8 +201,20 @@ export class LeadsService {
     if (platform) url += `&platform=${encodeURIComponent(platform)}`;
     if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
 
+    console.log('[LeadsService] getRecentLeads - Request:', {
+      limit,
+      skip,
+      status,
+      platform,
+      userId,
+      url
+    });
     const response: Awaited<AxiosResponse<UriResponse<RecentLeadsResponse>>> =
       await AdminHttpClient.getClient().get(url);
+    console.log('[LeadsService] getRecentLeads - Response:', {
+      status: response.status,
+      data: response.data
+    });
     return response.data;
   }
 
