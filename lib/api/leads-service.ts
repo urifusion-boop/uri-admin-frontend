@@ -129,6 +129,24 @@ export interface PlatformPerformanceDto {
 }
 
 /**
+ * Lead Type Distribution DTO
+ */
+export interface LeadTypeDistributionDto {
+  lead_type: string;
+  total_leads: number;
+  avg_intent_score: number;
+  avg_relevance_score: number;
+  conversion_rate: number;
+  qualification_rate: number;
+  status_breakdown: {
+    new: number;
+    contacted: number;
+    qualified: number;
+    converted: number;
+  };
+}
+
+/**
  * Admin Leads Service
  * Professional admin analytics endpoints for lead management
  */
@@ -153,19 +171,10 @@ export class LeadsService {
     dateFilter: string = 'LAST_1_MONTH'
   ): Promise<UriResponse<AdminLeadOverviewDto>> {
     const filterValue = DATE_FILTER_VALUES[dateFilter] || '1_month';
-    console.log('[LeadsService] getLeadOverview - Request:', {
-      dateFilter,
-      filterValue,
-      url: `${BackendUrlEnum.INSIGHTS}/admin/leads/overview?date_filter=${filterValue}`
-    });
     const response: Awaited<AxiosResponse<UriResponse<AdminLeadOverviewDto>>> =
       await AdminHttpClient.getClient().get(
         `${BackendUrlEnum.INSIGHTS}/admin/leads/overview?date_filter=${filterValue}`
       );
-    console.log('[LeadsService] getLeadOverview - Response:', {
-      status: response.status,
-      data: response.data
-    });
     return response.data;
   }
 
@@ -201,20 +210,8 @@ export class LeadsService {
     if (platform) url += `&platform=${encodeURIComponent(platform)}`;
     if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
 
-    console.log('[LeadsService] getRecentLeads - Request:', {
-      limit,
-      skip,
-      status,
-      platform,
-      userId,
-      url
-    });
     const response: Awaited<AxiosResponse<UriResponse<RecentLeadsResponse>>> =
       await AdminHttpClient.getClient().get(url);
-    console.log('[LeadsService] getRecentLeads - Response:', {
-      status: response.status,
-      data: response.data
-    });
     return response.data;
   }
 
@@ -277,6 +274,22 @@ export class LeadsService {
       AxiosResponse<UriResponse<{ platforms: PlatformPerformanceDto[]; date_range: any }>>
     > = await AdminHttpClient.getClient().get(
       `${BackendUrlEnum.INSIGHTS}/admin/leads/platform-performance?date_filter=${filterValue}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Get lead type distribution and metrics
+   * GET /admin/leads/lead-type-distribution
+   */
+  static async getLeadTypeDistribution(
+    dateFilter: string = 'LAST_1_MONTH'
+  ): Promise<UriResponse<{ lead_types: LeadTypeDistributionDto[]; date_range: any }>> {
+    const filterValue = DATE_FILTER_VALUES[dateFilter] || '1_month';
+    const response: Awaited<
+      AxiosResponse<UriResponse<{ lead_types: LeadTypeDistributionDto[]; date_range: any }>>
+    > = await AdminHttpClient.getClient().get(
+      `${BackendUrlEnum.INSIGHTS}/admin/leads/lead-type-distribution?date_filter=${filterValue}`
     );
     return response.data;
   }

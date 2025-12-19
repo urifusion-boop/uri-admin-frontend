@@ -40,18 +40,20 @@ export function RecentLeadsTable() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { data: leadsData, isLoading } = useRecentLeads(50, 0, statusFilter === 'all' ? undefined : statusFilter);
 
-  const leads: Lead[] = (leadsData?.leads || []).map(lead => ({
-    id: lead.lead_id,
-    name: lead.name,
-    email: lead.email,
-    platform: lead.platform,
-    status: lead.status,
-    intentScore: lead.intent_score || 0,
-    relevanceScore: lead.relevance_score || 0,
-    createdDate: lead.created_date,
-    userEmail: lead.user_email,
-    userName: lead.user_name,
-  }));
+  const leads: Lead[] = (leadsData?.leads || []).map(lead => {
+    return {
+      id: lead.lead_id,
+      name: lead.name || 'Unknown',
+      email: lead.email,
+      platform: lead.platform,
+      status: lead.status,
+      intentScore: lead.intent_score || 0,
+      relevanceScore: lead.relevance_score || 0,
+      createdDate: lead.created_date,
+      userEmail: lead.user_email,
+      userName: lead.user_name?.trim() || 'Unknown User',
+    };
+  });
 
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch =

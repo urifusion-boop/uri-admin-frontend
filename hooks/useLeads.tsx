@@ -9,7 +9,8 @@ import {
   TopUserDto,
   LeadTrendDto,
   ConversionFunnelDto,
-  PlatformPerformanceDto
+  PlatformPerformanceDto,
+  LeadTypeDistributionDto
 } from '@/lib/api/leads-service';
 
 /**
@@ -141,6 +142,24 @@ export function usePlatformPerformance(dateFilter: string = 'LAST_1_MONTH') {
         throw new Error(response.responseMessage || 'Failed to fetch platform performance');
       }
       return response.responseData.platforms;
+    },
+    refetchInterval: 120000,
+    staleTime: 60000,
+  });
+}
+
+/**
+ * Hook for lead type distribution metrics
+ */
+export function useLeadTypeDistribution(dateFilter: string = 'LAST_1_MONTH') {
+  return useQuery<LeadTypeDistributionDto[] | undefined>({
+    queryKey: ['leads', 'lead-type-distribution', dateFilter],
+    queryFn: async () => {
+      const response = await LeadsService.getLeadTypeDistribution(dateFilter);
+      if (!response.status) {
+        throw new Error(response.responseMessage || 'Failed to fetch lead type distribution');
+      }
+      return response.responseData.lead_types;
     },
     refetchInterval: 120000,
     staleTime: 60000,

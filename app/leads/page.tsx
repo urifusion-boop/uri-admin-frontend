@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { MetricCard } from '@/components/dashboard/overview/cards';
-import { LeadStatusChart, LeadsByPlatformChart } from '@/components/dashboard/leads/charts';
-import { RecentLeadsTable } from '@/components/dashboard/leads/tables';
-import { Loader2, Target, TrendingUp, CheckCircle, Clock } from 'lucide-react';
+import { LeadStatusChart, LeadTypeChart } from '@/components/dashboard/leads/charts';
+import { UserPerformanceTable } from '@/components/dashboard/leads/UserPerformanceTable';
+import { PlatformPerformanceCard } from '@/components/dashboard/leads/PlatformPerformanceCard';
+import { Loader2, Target, TrendingUp, CheckCircle, Users } from 'lucide-react';
 import { useLeadOverview } from '@/hooks/useLeads';
 
 export default function LeadsPage() {
@@ -33,15 +34,18 @@ export default function LeadsPage() {
     return null;
   }
 
+  const topUsersCount = overview?.top_users?.length || 0;
+
   return (
     <AdminLayout>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Leads Analytics</h1>
+        <h1 className="text-3xl font-bold text-foreground">Lead Generation Analytics</h1>
         <p className="text-muted-foreground mt-2">
-          Track and manage lead generation and conversion
+          Monitor user performance, lead quality, and conversion metrics
         </p>
       </div>
 
+      {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
           title="Total Leads"
@@ -52,12 +56,20 @@ export default function LeadsPage() {
           index={0}
         />
         <MetricCard
+          title="Active Users"
+          value={analyticsLoading ? '...' : topUsersCount.toLocaleString()}
+          change={0}
+          icon={Users}
+          iconColor="#3b82f6"
+          index={1}
+        />
+        <MetricCard
           title="Qualified Leads"
           value={analyticsLoading ? '...' : (overview?.conversion_metrics?.qualified_leads || 0).toLocaleString()}
           change={0}
           icon={CheckCircle}
           iconColor="#10b981"
-          index={1}
+          index={2}
         />
         <MetricCard
           title="Conversion Rate"
@@ -65,19 +77,12 @@ export default function LeadsPage() {
           change={0}
           icon={TrendingUp}
           iconColor="#f59e0b"
-          index={2}
-        />
-        <MetricCard
-          title="Qualification Rate"
-          value={analyticsLoading ? '...' : `${overview?.conversion_metrics?.qualification_rate || 0}%`}
-          change={0}
-          icon={Clock}
-          iconColor="#3b82f6"
           index={3}
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+      {/* Lead Distribution Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
         <LeadStatusChart
           data={(() => {
             const status = overview?.status_breakdown;
@@ -90,15 +95,16 @@ export default function LeadsPage() {
             ];
           })()}
         />
-        <LeadsByPlatformChart
-          data={(() => {
-            const breakdown = overview?.platform_breakdown || {};
-            return Object.entries(breakdown).map(([platform, count]) => ({ platform, count: typeof count === 'number' ? count : 0 }));
-          })()}
-        />
+        <LeadTypeChart />
       </div>
 
-      <RecentLeadsTable />
+      {/* Platform Performance */}
+      <div className="mb-8">
+        <PlatformPerformanceCard />
+      </div>
+
+      {/* User Performance Table */}
+      <UserPerformanceTable />
     </AdminLayout>
   );
 }
