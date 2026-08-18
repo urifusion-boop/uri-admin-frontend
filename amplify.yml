@@ -1,0 +1,40 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "branch=${AWS_BRANCH:-unknown} app=${AWS_APP_ID:-unknown} commit=${AWS_COMMIT_ID:-unknown}"
+        - echo "api=${NEXT_PUBLIC_URI_API_BASE_URL:-UNSET} env=${NEXT_PUBLIC_ENV:-UNSET}"
+
+        - nvm use 22 || nvm install 22
+        - node -v
+        - test -n "$NEXT_PUBLIC_URI_API_BASE_URL" || { echo "FATAL NEXT_PUBLIC_URI_API_BASE_URL is not set on this app"; exit 1; }
+        - test -n "$NEXT_PUBLIC_API_URL" || { echo "FATAL NEXT_PUBLIC_API_URL is not set on this app"; exit 1; }
+
+        - npm ci
+    build:
+      commands:
+        - npm run build
+        - |
+          test -f .next/routes-manifest.json || {
+            echo "FATAL .next/routes-manifest.json missing — expected a server build, not a static export";
+            exit 1;
+          }
+        - echo ".next is $(du -sh .next | cut -f1)"
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
+customHeaders:
+  - pattern: '**'
+    headers:
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'X-Frame-Options'
+        value: 'DENY'
+      - key: 'Referrer-Policy'
+        value: 'strict-origin-when-cross-origin'
