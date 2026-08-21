@@ -4,7 +4,7 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
-import type { Event, EventHint, Integration } from '@sentry/types';
+import type { Event, EventHint } from '@sentry/nextjs';
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.uricreative.com:8443';
 
@@ -21,7 +21,7 @@ interface ExceptionLogPayload {
 /**
  * Custom integration that sends exceptions to your backend dashboard
  */
-export const dashboardIntegration = (): Integration => {
+export const dashboardIntegration = () => {
   return {
     name: 'DashboardIntegration',
     setupOnce() {
@@ -44,8 +44,9 @@ export const dashboardIntegration = (): Integration => {
  */
 async function sendToCustomDashboard(event: Event, hint: EventHint): Promise<void> {
   try {
-    // Only send errors (not transactions, etc.)
-    if (event.type !== 'error' && event.type !== 'transaction') {
+    // Only send errors (not transactions, etc.). Sentry gives plain error
+    // events type === undefined; every other EventType is a non-error.
+    if (event.type !== undefined) {
       return;
     }
 
@@ -54,7 +55,7 @@ async function sendToCustomDashboard(event: Event, hint: EventHint): Promise<voi
     if (!exception) return;
 
     // Get user info from Sentry scope
-    const userId = event.user?.id || event.user?.email || 'anonymous';
+    const userId = String(event.user?.id || event.user?.email || 'anonymous');
 
     // Build exception log payload matching your backend schema
     const payload: ExceptionLogPayload = {

@@ -3,7 +3,6 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
-import { browserProfilingIntegration } from "@sentry/profiling-node";
 import { dashboardIntegration } from "./lib/sentry-dashboard-integration";
 
 Sentry.init({
